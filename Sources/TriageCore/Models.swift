@@ -10,11 +10,15 @@ public struct IndicatorSet: Codable {
     public var version: String
     public var indicators: [Indicator]
     public var unsupported: [String]
+    public var sources: [String]? = nil
+    public var checkedAt: Date? = nil
+    public var latestIndicatorDate: Date? = nil
+    public var byteCount: Int? = nil
     public static let demo = IndicatorSet(version: "demo-1 — NOT threat intelligence", indicators: [.init(id: "demo-domain", kind: "domain-name:value", value: "triage-test.invalid")], unsupported: [])
     public static func parse(_ data: Data) throws -> IndicatorSet {
         let root = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         guard let objects = root?["objects"] as? [[String: Any]], root?["type"] as? String == "bundle" else { throw TriageError.invalid("Expected a STIX2 bundle") }
-        let regex = try NSRegularExpression(pattern: "^\\[([a-z-]+:[a-z]+) = '([^'\\\\]+)'\\]$")
+        let regex = try NSRegularExpression(pattern: "^\\s*\\[\\s*([a-z-]+:[a-z]+)\\s*=\\s*'([^'\\\\]+)'\\s*\\]\\s*$")
         let supported = ["domain-name:value", "url:value", "process:name", "file:path", "file:name"]
         var found: [Indicator] = []; var skipped: [String] = []
         for item in objects where item["type"] as? String == "indicator" {
@@ -29,7 +33,15 @@ public struct IndicatorSet: Codable {
             guard !pattern[vr].isEmpty, pattern[vr].count <= 2048, found.count < 2000 else { skipped.append("\(id): indicator size/count limit"); continue }
             found.append(.init(id: id, kind: String(pattern[kr]), value: String(pattern[vr])))
         }
-        return IndicatorSet(version: root?["id"] as? String ?? "imported", indicators: found, unsupported: skipped)
+        var result = IndicatorSet(version: root?["id"] as? String ?? "imported", indicators: found, unsupported: skipped)
+        let fractional = ISO8601DateFormatter(); fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let plain = ISO8601DateFormatter()
+        result.latestIndicatorDate = objects.filter { $0["type"] as? String == "indicator" }.compactMap { object -> Date? in
+            guard let text = object["modified"] as? String ?? object["created"] as? String else { return nil }
+            return fractional.date(from: text) ?? plain.date(from: text)
+        }.max()
+        result.byteCount = data.count
+        return result
     }
 }
 public struct Finding: Codable, Identifiable {
@@ -52,6 +64,8 @@ public struct Report: Codable {
     public var archiveSHA256 = ""
     public var indicatorVersion: String
     public var indicatorSHA256 = ""
+    public var indicatorSources: [String]? = nil
+    public var indicatorsCheckedAt: Date? = nil
     public var consentConfirmedAt: Date
     public var completed = false
     public var findings: [Finding] = []
@@ -65,6 +79,8 @@ public struct Report: Codable {
     public init(caseID: String, indicators: IndicatorSet, consent: Date) {
         self.caseID = caseID; indicatorVersion = indicators.version; consentConfirmedAt = consent
         skipped = indicators.unsupported
+        indicatorSources = indicators.sources
+        indicatorsCheckedAt = indicators.checkedAt
     }
 }
 public enum TriageError: LocalizedError {

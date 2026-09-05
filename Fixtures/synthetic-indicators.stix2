@@ -1,0 +1,1 @@
+{"type":"bundle","id":"bundle--synthetic-demo","objects":[{"type":"indicator","id":"indicator--synthetic-domain","pattern_type":"stix","pattern":"[domain-name:value = 'triage-test.invalid']"}]}

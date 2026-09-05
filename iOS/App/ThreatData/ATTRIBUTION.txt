@@ -1,0 +1,11 @@
+Indicators by Amnesty International. https://github.com/AmnestyTech/investigations
+CC BY 2.0: https://creativecommons.org/licenses/by/2.0/
+Unmodified source bundles; Triage uses a supported subset. No endorsement implied.
+Revision: 3d8f248a0d015f183724ae7d096a5c46a8bb5fc7
+Retrieved: 2026-09-05T17:50:01Z
+2021-07-18_nso/pegasus.stix2
+SHA-256 df1bcaa78abc7b85781b1ebc2daa3cc225371e2024d9ef96e84f80f927256586
+https://raw.githubusercontent.com/AmnestyTech/investigations/3d8f248a0d015f183724ae7d096a5c46a8bb5fc7/2021-07-18_nso/pegasus.stix2
+2021-12-16_cytrox/cytrox.stix2
+SHA-256 6fe92193d9e17c21a16eb7abe93a418a2e40c0176dcb56fb30539f84136391bb
+https://raw.githubusercontent.com/AmnestyTech/investigations/3d8f248a0d015f183724ae7d096a5c46a8bb5fc7/2021-12-16_cytrox/cytrox.stix2

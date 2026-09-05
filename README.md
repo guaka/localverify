@@ -2,7 +2,7 @@
 
 Swift/SwiftUI iOS 17+ application and import-only share extension. Processing is local; no backend or telemetry. Android remains a documented second phase in [docs/ANDROID.md](docs/ANDROID.md).
 
-**Experimental:** this is a focused diagnostics parser, not full MVT parity. The bundled `triage-test.invalid` indicator is demonstration data, not threat intelligence. Import a trusted STIX2 bundle for real investigation. No confirmed-positive or physical-device validation has yet been performed.
+**Experimental:** this is a focused diagnostics parser, not full MVT parity. The app bundles 1.49 MB of Amnesty Pegasus and Predator/Cytrox indicators for offline use. It supports 1,862 definitions in the current snapshot and explicitly skips 30 unsupported definitions. Historical indicators do not provide comprehensive current-spyware coverage. Device installation and synthetic tests are documented separately from real-world detection validation.
 
 ## Build
 
@@ -44,4 +44,6 @@ STIX support is intentionally restricted to single equality expressions for doma
 
 See [verification](docs/VERIFICATION.md) and [report contract](docs/REPORT.md).
 
-For a synthetic manual test, run `python3 tools/generate_fixture.py`, transfer `Fixtures/synthetic-sysdiagnose.tar.gz` to Files, and import with the bundled demo indicator. Expect two leads: one raw-text and one structured. This archive contains no real device data.
+For a synthetic manual test, run `python3 tools/generate_fixture.py`, transfer `Fixtures/synthetic-sysdiagnose.tar.gz` and `Fixtures/synthetic-indicators.stix2` to Files, import those test indicators, and then import the archive. Expect two leads: one raw-text and one structured. Use bundled indicators restores the real definitions afterward. The synthetic archive contains no real device data.
+
+See [indicator update tools](docs/INDICATOR_UPDATES.md) for checking, refreshing, and pinning bundled publisher revisions. Optional in-app updates download only definitions; no archives or findings are uploaded.

@@ -21,6 +21,9 @@ The local SAF iOS 15 sample used during initial verification was obtained from [
 - Real sysdiagnose sample evaluation and confirmed-positive validation remain outstanding.
 - Collection-guide/import update installed and launched on `ip2`. Two simulator UI tests pass: the consent-gated archive picker and indicator picker both open, and the offline collection guide is reachable.
 - Fixed competing SwiftUI fileImporter presenters by using one routed picker. The Files staging folder is exposed separately from private cases.
+- Bundled-indicator update: 16 core tests executed with zero failures (one optional real-archive test skipped), including a live public-feed download. Three simulator UI tests pass, covering the bottom tabs, license screen, bundled indicator count, date format and MB size, both import pickers, and the offline collection guide.
+- Publisher snapshot check confirmed revision `3d8f248a0d015f183724ae7d096a5c46a8bb5fc7`. Bundled definitions total 1,486,428 bytes, with 1,862 supported and 30 explicitly skipped indicators. These checks establish parsing and update behavior, not detection effectiveness.
+- This bundled-indicator/tab update was signed with Trustroots Foundation, reinstalled on `ip2`, and successfully launched. This remains the Files-only build; physical-device airplane-mode analysis/export validation is still a separate release gate.
 
 Before investigator deployment, complete and record:
 

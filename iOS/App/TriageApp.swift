@@ -5,7 +5,12 @@ import UniformTypeIdentifiers
 struct TriageApp: App {
     @StateObject private var model = CaseStore()
     var body: some Scene {
-        WindowGroup { ContentView(model: model).tint(Color("AccentColor")).onAppear { model.load() }.onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in model.loadInbox() } }
+        WindowGroup {
+            ContentView(model: model)
+                .tint(Color("AccentColor"))
+                .onAppear { model.load() }
+                .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in model.loadInbox() }
+        }
     }
 }
 
@@ -16,6 +21,7 @@ struct TriageApp: App {
     @Published var canCancel = false
     @Published var progress = ""
     @Published var indicators = IndicatorSet.demo
+    @Published var updatingIndicators = false
     @Published var inbox: [URL] = []
     private var job: Task<Void, Never>?
     let root: URL
@@ -26,7 +32,31 @@ struct TriageApp: App {
             let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             try Self.protect(documents)
             try Self.protect(documents.appendingPathComponent("Imports", isDirectory: true))
+            let cached = try? JSONDecoder().decode(IndicatorSet.self, from: Data(contentsOf: indicatorCache))
+            indicators = try cached ?? ThreatUpdates.bundled(in: .main)
         } catch { message = error.localizedDescription }
+    }
+    private var indicatorCache: URL { root.deletingLastPathComponent().appendingPathComponent("active-indicators.json") }
+    private func activateIndicators(_ set: IndicatorSet) throws {
+        guard !set.indicators.isEmpty else { throw TriageError.invalid("No supported indicators; current set retained") }
+        try LocalStorage.write(JSONEncoder().encode(set), to: indicatorCache)
+        indicators = set
+    }
+    func updateIndicators() {
+        guard !updatingIndicators, !busy else { return }
+        updatingIndicators = true
+        Task {
+            defer { updatingIndicators = false }
+            do {
+                let updated = try await ThreatUpdates.download()
+                try activateIndicators(updated)
+                message = "Threat indicators updated. Existing cases keep their original definitions."
+            } catch { message = "Update failed; previous indicators retained. \(error.localizedDescription)" }
+        }
+    }
+    func useBundledIndicators() {
+        do { try activateIndicators(ThreatUpdates.bundled(in: .main)); message = "Using bundled Amnesty indicators." }
+        catch { message = error.localizedDescription }
     }
     nonisolated static func protect(_ url: URL) throws {
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true, attributes: [.protectionKey: FileProtectionType.complete])
@@ -50,7 +80,7 @@ struct TriageApp: App {
         do {
             let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
             guard size <= 5 * 1024 * 1024 else { throw TriageError.invalid("Indicator file exceeds 5 MiB") }
-            indicators = try IndicatorSet.parse(Data(contentsOf: url))
+            try activateIndicators(IndicatorSet.parse(Data(contentsOf: url)))
             message = "Loaded \(indicators.indicators.count) indicators; \(indicators.unsupported.count) unsupported."
         } catch { message = error.localizedDescription }
     }
@@ -124,15 +154,39 @@ struct TriageApp: App {
 
 struct ContentView: View {
     @ObservedObject var model: CaseStore
+    var body: some View {
+        TabView {
+            ScanView(model: model)
+                .tabItem { Label("Scan", systemImage: "magnifyingglass") }
+            CasesView(model: model)
+                .tabItem { Label("Cases", systemImage: "tray.full") }
+            AboutView()
+                .tabItem { Label("About", systemImage: "info.circle") }
+        }
+    }
+}
+
+struct ScanView: View {
+    @ObservedObject var model: CaseStore
     @State private var consent = false
     @State private var importing = false
     private enum ImportKind { case archive, indicators }
     @State private var importKind: ImportKind = .archive
+    private func timestamp(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd HH:mm"
+        return formatter.string(from: date)
+    }
     var body: some View {
         NavigationStack {
             List {
                 Section {
-                    Label("Local evidence. Reviewable leads.", systemImage: "magnifyingglass")
+                    Label {
+                        Text("Local evidence. Reviewable leads.")
+                    } icon: {
+                        Image(systemName: "magnifyingglass").foregroundStyle(Color("AccentColor"))
+                    }
                     Text("Experimental investigator prototype. Diagnostics provide limited coverage; no matches does not establish that a device is uncompromised.").font(.footnote)
                 }
                 Section("1 · Collect diagnostics") {
@@ -150,28 +204,27 @@ struct ContentView: View {
                             .swipeActions { Button("Delete", role: .destructive) { model.deleteInbox(url) }.disabled(model.busy) }
                     }
                 }
-                Section("Indicators for new cases") {
+                Section("Threat indicators") {
                     Text(model.indicators.version).font(.caption)
-                    Text("Bundled demonstration indicator: triage-test.invalid. Import trusted threat indicators for investigative use.").font(.footnote)
-                    Button("Import STIX2 bundle") { importKind = .indicators; importing = true }.disabled(model.busy).accessibilityIdentifier("importIndicators")
-                    ForEach(model.indicators.unsupported, id: \.self) { Text($0).font(.caption) }
+                    Text("\(model.indicators.indicators.count) supported · \(model.indicators.unsupported.count) skipped").font(.subheadline).accessibilityIdentifier("indicatorCount")
+                    LabeledContent("Definitions dated", value: model.indicators.latestIndicatorDate.map(timestamp) ?? "Not supplied")
+                    if let size = model.indicators.byteCount { LabeledContent("Size", value: String(format: "%.2f MB", Double(size) / 1_000_000)) }
+                    if let checked = model.indicators.checkedAt { LabeledContent("Last checked", value: timestamp(checked)) }
+                    Text("Dates shown in device local time.").font(.caption).foregroundStyle(.secondary)
+                    Text("Includes selected historical Pegasus and Predator campaign indicators. Updates do not imply coverage of every current threat.").font(.footnote).foregroundStyle(.secondary)
+                    Button("Update threat indicators", systemImage: "arrow.triangle.2.circlepath") { model.updateIndicators() }.disabled(model.busy || model.updatingIndicators).accessibilityIdentifier("updateIndicators")
+                    if model.updatingIndicators { ProgressView("Downloading public definitions…") }
+                    Text("Downloads definitions from Amnesty's public GitHub repository. No diagnostics or findings are sent. GitHub sees normal connection metadata, such as your IP address.").font(.caption).foregroundStyle(.secondary)
+                    Button("Import threat indicators", systemImage: "doc.badge.plus") { importKind = .indicators; importing = true }.disabled(model.busy || model.updatingIndicators).accessibilityIdentifier("importIndicators")
+                    Text("Advanced: import a STIX2 JSON file supplied by an investigator.").font(.caption).foregroundStyle(.secondary)
+                    Button("Use bundled indicators", systemImage: "shippingbox") { model.useBundledIndicators() }.disabled(model.busy || model.updatingIndicators)
+                    if !model.indicators.unsupported.isEmpty {
+                        DisclosureGroup("Unsupported definitions") { ForEach(model.indicators.unsupported, id: \.self) { Text($0).font(.caption) } }
+                    }
                 }
                 if model.busy { Section { ProgressView(model.progress); if model.canCancel { Button("Cancel") { model.cancel() } } } }
                 if !model.message.isEmpty { Section { Text(model.message).foregroundStyle(.orange) } }
-                Section("Cases") {
-                    ForEach(model.reports, id: \.caseID) { report in
-                        NavigationLink { CaseView(model: model, id: report.caseID) } label: {
-                            VStack(alignment: .leading) { Text(report.status); Text(report.createdAt.formatted()).font(.caption); Text("\(report.findings.count) leads · \(report.analyzed.count) files").font(.caption) }
-                        }
-                    }
-                }
-                Section {
-                    Text("MVT License 1.1 · Experimental\nSource and third-party notices accompany private builds.").font(.footnote)
-                    NavigationLink("License") {
-                        ScrollView { Text((Bundle.main.url(forResource: "LICENSE", withExtension: nil).flatMap { try? String(contentsOf: $0) }) ?? "See LICENSE in the supplied source distribution.").font(.caption).padding() }.navigationTitle("MVT License 1.1")
-                    }
-                }
-            }.navigationTitle("Local Verify")
+            }.navigationTitle("Scan")
             .fileImporter(isPresented: $importing, allowedContentTypes: [.data]) { result in
                 do {
                     let url = try result.get()
@@ -184,6 +237,81 @@ struct ContentView: View {
         }
     }
 }
+struct CasesView: View {
+    @ObservedObject var model: CaseStore
+    var body: some View {
+        NavigationStack {
+            List {
+                if model.busy {
+                    Section {
+                        ProgressView(model.progress)
+                        if model.canCancel { Button("Cancel", systemImage: "xmark.circle") { model.cancel() } }
+                    }
+                }
+                if model.reports.isEmpty {
+                    ContentUnavailableView("No cases yet", systemImage: "tray", description: Text("Import diagnostics in Scan. Your local cases and findings will appear here."))
+                } else {
+                    ForEach(model.reports, id: \.caseID) { report in
+                        NavigationLink { CaseView(model: model, id: report.caseID) } label: {
+                            Label {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(report.status)
+                                    Text(report.createdAt.formatted()).font(.subheadline).foregroundStyle(.secondary)
+                                    Text("\(report.findings.count) leads · \(report.analyzed.count) files").font(.caption).foregroundStyle(.secondary)
+                                }
+                            } icon: { Image(systemName: "doc.text.magnifyingglass") }
+                        }
+                    }
+                }
+            }.navigationTitle("Cases")
+        }
+    }
+}
+
+struct AboutView: View {
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Label {
+                        Text("Local Verify")
+                    } icon: {
+                        Image(systemName: "checkmark").foregroundStyle(Color("AccentColor"))
+                    }
+                    .font(.title2.bold())
+                    Text("Private, on-device diagnostic verification for investigators.")
+                    LabeledContent("Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0")
+                }
+                Section("Privacy") {
+                    Label("Analysis stays on this device", systemImage: "iphone")
+                    Text("No uploads or telemetry. Case files are protected and excluded from automatic backup. Data leaves Local Verify only when you choose to share an export.")
+                    Text("Copies you saved in Files or previously shared remain separate from a Local Verify case.").font(.footnote).foregroundStyle(.secondary)
+                }
+                Section("Experimental coverage") {
+                    Text("Findings are leads for review, not proof of compromise. No matches does not establish that a device is uncompromised.")
+                    Text("Bundled definitions cover selected historical Pegasus and Predator campaigns; unsupported indicator patterns are listed in Scan.").font(.footnote).foregroundStyle(.secondary)
+                }
+                Section("Indicator sources") {
+                    Text("Amnesty International — Pegasus and Predator/Cytrox. Unmodified source bundles, licensed CC BY 2.0. The app uses only supported patterns.")
+                    Link("Source and attribution", destination: URL(string: "https://github.com/AmnestyTech/investigations")!)
+                    Link("CC BY 2.0 license", destination: URL(string: "https://creativecommons.org/licenses/by/2.0/")!)
+                    Text("Optional updates download public definitions only. No diagnostic uploads or telemetry.").font(.footnote)
+                }
+                Section("Legal") {
+                    NavigationLink {
+                        ScrollView {
+                            Text((Bundle.main.url(forResource: "LICENSE", withExtension: nil).flatMap { try? String(contentsOf: $0) }) ?? "See LICENSE in the supplied source distribution.")
+                                .font(.body).textSelection(.enabled).padding()
+                        }.navigationTitle("MVT License 1.1").navigationBarTitleDisplayMode(.inline)
+                    } label: { Label("License", systemImage: "doc.text") }
+                    .accessibilityIdentifier("license")
+                    Text("MVT License 1.1. Source and third-party notices accompany private builds.").font(.footnote).foregroundStyle(.secondary)
+                }
+            }.navigationTitle("About")
+        }
+    }
+}
+
 struct CaseView: View {
     @ObservedObject var model: CaseStore
     let id: String

@@ -1,6 +1,24 @@
 import XCTest
 
 final class ImportPickerTests: XCTestCase {
+    func testTabsAndBundledIndicatorMetadata() {
+        let app = XCUIApplication(); app.launch()
+        XCTAssertTrue(app.tabBars.buttons["Scan"].exists)
+        app.tabBars.buttons["Cases"].tap()
+        XCTAssertTrue(app.navigationBars["Cases"].exists)
+        app.tabBars.buttons["About"].tap()
+        let license = app.buttons["license"]
+        for _ in 0..<6 where !license.isHittable { app.swipeUp() }
+        license.tap()
+        XCTAssertTrue(app.navigationBars["MVT License 1.1"].exists)
+        app.tabBars.buttons["Scan"].tap()
+        let size = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "1.49 MB")).firstMatch
+        for _ in 0..<6 where !size.isHittable { app.swipeUp() }
+        XCTAssertTrue(size.exists, app.debugDescription)
+        XCTAssertTrue(app.staticTexts["indicatorCount"].label.contains("1862"))
+        let date = app.descendants(matching: .any).matching(NSPredicate(format: "label MATCHES %@", ".*[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}.*")).firstMatch
+        XCTAssertTrue(date.exists, app.debugDescription)
+    }
     func testBothImportButtonsPresentPicker() {
         let app = XCUIApplication()
         app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
