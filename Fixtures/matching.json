@@ -1,0 +1,7 @@
+[
+  {"text":"connected triage-test.invalid", "expected":1, "matchType":"raw-text"},
+  {"text":"triage-test.invalid.example", "expected":0, "matchType":null},
+  {"text":"safe-triage-test.invalid", "expected":0, "matchType":null},
+  {"text":"{\"hostname\":\"TRIAGE-TEST.INVALID\"}", "expected":1, "matchType":"structured"},
+  {"text":"ordinary application crash", "expected":0, "matchType":null}
+]
