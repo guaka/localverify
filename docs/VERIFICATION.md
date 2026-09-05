@@ -11,6 +11,8 @@ Automated core tests cover equality/unsupported STIX patterns, structured versus
 - Files-only build signed with Trustroots Foundation, installed and launched on the paired iPhone 15 Pro Max (`ip2`) on 2026-09-05.
 - 10 Swift core tests pass, including explicit backup exclusion for local files. Device installation/launch does not yet establish real sysdiagnose analysis coverage.
 - Real sysdiagnose sample evaluation and confirmed-positive validation remain outstanding.
+- Collection-guide/import update installed and launched on `ip2`. Two simulator UI tests pass: the consent-gated archive picker and indicator picker both open, and the offline collection guide is reachable.
+- Fixed competing SwiftUI fileImporter presenters by using one routed picker. The Files staging folder is exposed separately from private cases.
 
 Before investigator deployment, complete and record:
 
