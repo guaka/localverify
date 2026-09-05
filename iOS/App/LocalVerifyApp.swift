@@ -310,7 +310,7 @@ struct CasesView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(report.status)
                                     Text(report.createdAt.formatted()).font(.subheadline).foregroundStyle(.secondary)
-                                    Text("\(report.findings.count) leads · \(report.analyzed.count) files").font(.caption).foregroundStyle(.secondary)
+                                    Text("\(report.findings.count) matches · \(report.analyzed.count) files").font(.caption).foregroundStyle(.secondary)
                                 }
                             } icon: { Image(systemName: "doc.text.magnifyingglass") }
                         }
@@ -383,13 +383,26 @@ struct CaseView: View {
                     Text(report.indicatorVersion).font(.caption)
                     if !report.completed { Button("Resume analysis") { model.run(report) }.disabled(model.busy) }
                 }
-                Section("Leads") {
+                Section("Matches for review") {
+                    Text(report.matchReviewSummary).font(.footnote).foregroundStyle(.secondary)
                     ForEach(report.findings) { finding in
                         VStack(alignment: .leading, spacing: 6) {
-                            Text(finding.value).font(.headline)
+                            Text(finding.value).font(finding.isAmbiguousTextMatch ? .body : .headline)
+                                .foregroundStyle(finding.isAmbiguousTextMatch ? .secondary : .primary)
+                            Text(finding.reviewTitle).font(.subheadline)
+                            if finding.isAmbiguousTextMatch {
+                                Text("Short text match — especially ambiguous").font(.caption).foregroundStyle(.secondary)
+                            }
                             Text("\(finding.matchType) · \(finding.rule)").font(.caption)
                             Text("\(finding.source) — \(finding.record)").font(.caption)
                             Text(finding.explanation).font(.footnote)
+                            DisclosureGroup("How to review this match") {
+                                Text(finding.reviewGuidance).font(.footnote)
+                                if finding.isPegasusBridgeheadReference {
+                                    Text("Amnesty documented bh in historical Pegasus infections and suggested it may mean BridgeHead. A text occurrence here does not establish that the component executed.").font(.footnote)
+                                    Link("Amnesty: Pegasus forensic methodology", destination: URL(string: "https://www.amnesty.org/en/latest/research/2021/07/forensic-methodology-report-how-to-catch-nso-groups-pegasus/")!)
+                                }
+                            }
                             Text(finding.excerpt).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
                         }
                     }

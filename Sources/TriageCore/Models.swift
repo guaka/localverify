@@ -75,7 +75,9 @@ public struct Report: Codable {
     public var errors: [String] = []
     public var status: String {
         if !completed || !errors.isEmpty { return "Analysis incomplete" }
-        return findings.isEmpty ? "No matches in analyzed evidence" : "Leads requiring review"
+        if findings.isEmpty { return "No matches in analyzed evidence" }
+        if findings.allSatisfy({ $0.matchType == "raw-text" }) { return "Unverified text matches" }
+        return "Leads requiring review"
     }
     public init(caseID: String, indicators: IndicatorSet) {
         self.caseID = caseID; indicatorVersion = indicators.version

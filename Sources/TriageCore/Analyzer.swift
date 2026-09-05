@@ -9,7 +9,7 @@ public enum Analyzer {
             let now = Date()
             guard force || now.timeIntervalSince(lastUpdate) >= 0.25 else { return }
             lastUpdate = now
-            progress?("\(detail) · \(report.analyzed.count) files checked · \(report.findings.count) leads")
+            progress?("\(detail) · \(report.analyzed.count) files checked · \(report.findings.count) matches")
         }
         update("Verifying original archive", force: true)
         let digest = try Archive.hash(archive) { bytes in update("Verifying original · \(bytes / 1_000_000) MB") }
