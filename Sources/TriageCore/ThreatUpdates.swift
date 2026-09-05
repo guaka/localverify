@@ -5,6 +5,15 @@ public struct ThreatFeed {
     public let name: String
     public let resource: String
     public let url: URL
+    public var campaign: String {
+        switch resource {
+        case "pegasus": return "Pegasus"
+        case "cytrox", "predator": return "Predator"
+        case "coruna": return "Coruna"
+        case "darksword": return "DarkSword"
+        default: return "Uncategorized"
+        }
+    }
 }
 
 public enum ThreatUpdates {
@@ -21,6 +30,8 @@ public enum ThreatUpdates {
     /// Investigator-imported sets have no feed URLs and must never be replaced automatically.
     public static func preferredInstalledSet(cached: IndicatorSet?, bundled: IndicatorSet) -> IndicatorSet {
         guard let cached else { return bundled }
+        if cached.version == bundled.version, cached.sources == bundled.sources,
+           cached.indicators.allSatisfy({ $0.campaigns == nil }) { return bundled }
         let known = Set(feeds.map { $0.url.absoluteString })
         if let sources = cached.sources, !sources.isEmpty, Set(sources).isSubset(of: known),
            let newDate = bundled.latestIndicatorDate,
@@ -33,13 +44,23 @@ public enum ThreatUpdates {
     public static func combine(_ payloads: [Data], checkedAt: Date?) throws -> IndicatorSet {
         guard payloads.count == feeds.count else { throw TriageError.invalid("Incomplete indicator update") }
         var hash = SHA256(); var indicators: [Indicator] = []; var unsupported: [String] = []; var dates: [Date] = []
-        var seen = Set<String>()
+        var seen: [String: Int] = [:]
         for (index, data) in payloads.enumerated() {
             guard data.count <= maximumBytes else { throw TriageError.invalid("Indicator download exceeds 5 MiB") }
             let parsed = try IndicatorSet.parse(data)
             guard !parsed.indicators.isEmpty else { throw TriageError.invalid("\(feeds[index].name) contains no supported indicators") }
             hash.update(data: data)
-            indicators += parsed.indicators.filter { seen.insert($0.kind + "\u{0}" + $0.value).inserted }
+            for var indicator in parsed.indicators {
+                let key = indicator.kind + "\u{0}" + indicator.value
+                let campaign = feeds[index].campaign
+                if let existing = seen[key] {
+                    if !(indicators[existing].campaigns ?? []).contains(campaign) { indicators[existing].campaigns?.append(campaign) }
+                } else {
+                    indicator.campaigns = [campaign]
+                    seen[key] = indicators.count
+                    indicators.append(indicator)
+                }
+            }
             if let date = parsed.latestIndicatorDate { dates.append(date) }
             unsupported += parsed.unsupported.map { feeds[index].name + ": " + $0 }
         }

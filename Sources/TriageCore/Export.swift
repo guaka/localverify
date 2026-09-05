@@ -2,6 +2,27 @@ import Foundation
 import CZlib
 
 public enum Export {
+    public static func payloadText(_ finding: Finding) -> String {
+        """
+        Rule: \(finding.rule)
+        Match: \(finding.matchType)
+        Campaign: \((finding.campaigns ?? ["Uncategorized"]).joined(separator: ", "))
+        Value: \(finding.value)
+        Source: \(finding.source)
+        Record: \(finding.record)
+        Timestamp: \(finding.timestamp ?? "Not available")
+        Review: \(finding.explanation)
+
+        Evidence excerpt (not the complete source file):
+        \(finding.excerpt)
+        """
+    }
+
+    public static func payloadsText(_ report: Report) -> String {
+        let header = "Case: \(report.caseID)\nStatus: \(report.status)\nOriginal SHA-256: \(report.archiveSHA256)\n\nExperimental triage. These are leads requiring review, not proof of compromise.\n\n"
+        return header + (report.findings.isEmpty ? "No finding payloads recorded." : report.findings.map(payloadText).joined(separator: "\n\n---\n\n"))
+    }
+
     public static func json(_ report: Report) throws -> Data {
         let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]; encoder.dateEncodingStrategy = .iso8601
         return try encoder.encode(report)

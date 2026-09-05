@@ -3,13 +3,16 @@ import Foundation
 public enum Analyzer {
     public static func analyze(archive: URL, indicators: IndicatorSet, previous: Report, progress: ((String) -> Void)? = nil, checkpoint: (Report) throws -> Void) throws -> Report {
         var report = previous
+        report.analysisStartedAt = Date()
+        report.analysisFinishedAt = nil
         report.completed = false; report.errors = []
         var lastUpdate = Date.distantPast
         func update(_ detail: String, force: Bool = false) {
             let now = Date()
             guard force || now.timeIntervalSince(lastUpdate) >= 0.25 else { return }
             lastUpdate = now
-            progress?("\(detail) · \(report.analyzed.count) files checked · \(report.findings.count) matches")
+            let count = report.analyzed.count
+            progress?("\(detail) · \(count) \(count == 1 ? "file" : "files") checked · \(report.findings.count) matches")
         }
         update("Verifying original archive", force: true)
         let digest = try Archive.hash(archive) { bytes in update("Verifying original · \(bytes / 1_000_000) MB") }
@@ -43,6 +46,7 @@ public enum Analyzer {
             if report.analyzed.isEmpty { report.errors.append("No supported text or structured records were analyzed") }
             if indicators.indicators.isEmpty { report.errors.append("No supported indicators available") }
             report.completed = true
+            report.analysisFinishedAt = Date()
         } catch {
             report.errors.append(error is CancellationError ? "Analysis interrupted; resume to continue" : error.localizedDescription)
             try checkpoint(report)
@@ -145,6 +149,6 @@ public enum Analyzer {
         return findings
     }
     private static func make(_ i: Indicator, _ source: String, _ record: String, _ excerpt: String, _ type: String, _ timestamp: String?) -> Finding {
-        Finding(id: UUID().uuidString, rule: i.id, value: i.value, source: source, record: record, timestamp: timestamp, matchType: type, explanation: type == "structured" ? "Exact indicator match in a recognized field; review context before escalation." : "Indicator appears in text; this may be incidental and requires contextual review.", excerpt: excerpt)
+        Finding(id: UUID().uuidString, rule: i.id, value: i.value, source: source, record: record, timestamp: timestamp, matchType: type, explanation: type == "structured" ? "Exact indicator match in a recognized field; review context before escalation." : "Indicator appears in text; this may be incidental and requires contextual review.", excerpt: excerpt, campaigns: i.campaigns)
     }
 }

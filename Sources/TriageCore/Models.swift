@@ -4,6 +4,7 @@ public struct Indicator: Codable, Equatable {
     public var id: String
     public var kind: String
     public var value: String
+    public var campaigns: [String]? = nil
     public init(id: String, kind: String, value: String) { self.id = id; self.kind = kind; self.value = value }
 }
 public struct IndicatorSet: Codable {
@@ -54,6 +55,7 @@ public struct Finding: Codable, Identifiable {
     public var matchType: String
     public var explanation: String
     public var excerpt: String
+    public var campaigns: [String]? = nil
 }
 public struct Report: Codable {
     public var schemaVersion = 1
@@ -61,6 +63,9 @@ public struct Report: Codable {
     public var platform = "ios"
     public var caseID: String
     public var createdAt = Date()
+    public var sysdiagnoseFilename: String? = nil
+    public var analysisStartedAt: Date? = nil
+    public var analysisFinishedAt: Date? = nil
     public var archiveSHA256 = ""
     public var indicatorVersion: String
     public var indicatorSHA256 = ""

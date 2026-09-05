@@ -17,6 +17,7 @@ final class ThreatUpdateTests: XCTestCase {
         XCTAssertEqual(set.byteCount, 2_331_191)
         XCTAssertGreaterThan(set.latestIndicatorDate ?? .distantPast, ISO8601DateFormatter().date(from: "2026-03-01T00:00:00Z")!)
         XCTAssertEqual(Set(set.indicators.map { $0.kind + ":" + $0.value }).count, set.indicators.count)
+        XCTAssertEqual(Set(set.indicators.flatMap { $0.campaigns ?? [] }), Set(["Pegasus", "Predator", "Coruna", "DarkSword"]))
         for data in try payloads {
             XCTAssertFalse(try IndicatorSet.parse(data).indicators.isEmpty)
         }
@@ -42,6 +43,12 @@ final class ThreatUpdateTests: XCTestCase {
             let benign = try Analyzer.scan("Connected to \(indicator.value).benign.invalid", source: "benign.log", indicators: [indicator])
             XCTAssertTrue(benign.isEmpty)
         }
+    }
+    func testCampaignMetadataFlowsIntoFindings() throws {
+        let set = try ThreatUpdates.combine(payloads, checkedAt: nil)
+        let indicator = try XCTUnwrap(set.indicators.first { $0.kind == "domain-name:value" && $0.campaigns == ["DarkSword"] })
+        let findings = try Analyzer.scan("host \(indicator.value)", source: "synthetic.log", indicators: [indicator])
+        XCTAssertEqual(findings.first?.campaigns, ["DarkSword"])
     }
     func testInvalidOrIncompleteUpdatesRejected() throws {
         let valid = try payloads

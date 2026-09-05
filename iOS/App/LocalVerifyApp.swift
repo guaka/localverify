@@ -8,22 +8,32 @@ struct LocalVerifyApp: App {
         WindowGroup {
             ContentView(model: model)
                 .tint(Color("AccentColor"))
-                .onAppear { model.load() }
+                .onAppear {
+                    model.load()
+                    #if DEBUG && targetEnvironment(simulator)
+                    model.configureSyntheticUITest()
+                    #endif
+                }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in model.loadInbox() }
         }
     }
 }
 
 @MainActor final class CaseStore: ObservableObject {
+    enum Tab: Hashable { case scan, cases, indicators, about }
+    @Published var selectedTab = Tab.scan
+    @Published var casePath: [String] = []
     @Published var reports: [Report] = []
     @Published var message = ""
     @Published var busy = false
     @Published var canCancel = false
     @Published var progress = ""
+    @Published var activityTitle = "Working on this device"
     @Published var indicators = IndicatorSet.demo
     @Published var updatingIndicators = false
     @Published var inbox: [URL] = []
     private var job: Task<Void, Never>?
+    private var campaignMetadata: [String: [String]] = [:]
     let root: URL
     init() {
         root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Cases", isDirectory: true)
@@ -33,7 +43,9 @@ struct LocalVerifyApp: App {
             try Self.protect(documents)
             try Self.protect(documents.appendingPathComponent("Imports", isDirectory: true))
             let cached = try? JSONDecoder().decode(IndicatorSet.self, from: Data(contentsOf: indicatorCache))
-            indicators = try ThreatUpdates.preferredInstalledSet(cached: cached, bundled: ThreatUpdates.bundled(in: .main))
+            let bundled = try ThreatUpdates.bundled(in: .main)
+            campaignMetadata = Dictionary(bundled.indicators.map { ($0.id + "\u{0}" + $0.value, $0.campaigns ?? []) }, uniquingKeysWith: { first, _ in first })
+            indicators = ThreatUpdates.preferredInstalledSet(cached: cached, bundled: bundled)
         } catch { message = error.localizedDescription }
     }
     private var indicatorCache: URL { root.deletingLastPathComponent().appendingPathComponent("active-indicators.json") }
@@ -63,6 +75,36 @@ struct LocalVerifyApp: App {
         var mutable = url; var values = URLResourceValues(); values.isExcludedFromBackup = true; try mutable.setResourceValues(values)
     }
     func folder(_ id: String) -> URL { root.appendingPathComponent(id) }
+    func labeledReport(_ report: Report) -> Report {
+        var labeled = report
+        labeled.findings = report.findings.map { finding in
+            var result = finding
+            if result.campaigns == nil { result.campaigns = campaignMetadata[finding.rule + "\u{0}" + finding.value] }
+            return result
+        }
+        return labeled
+    }
+    #if DEBUG && targetEnvironment(simulator)
+    func configureSyntheticUITest() {
+        if ProcessInfo.processInfo.arguments.contains("--synthetic-progress") {
+            busy = true; canCancel = true; activityTitle = "Analyzing diagnostics"
+            progress = "Checking definitions 1240/2336 · synthetic-diagnostic.log · 1 files checked · 0 leads"
+        }
+        if ProcessInfo.processInfo.arguments.contains("--synthetic-case") {
+            var report = Report(caseID: "synthetic-ui-case", indicators: .demo)
+            report.sysdiagnoseFilename = "sysdiagnose_synthetic_ui.tar.gz"
+            report.analysisStartedAt = ISO8601DateFormatter().date(from: "2026-09-05T12:00:00Z")
+            report.analysisFinishedAt = ISO8601DateFormatter().date(from: "2026-09-05T12:01:00Z")
+            report.completed = true
+            report.findings = [
+                Finding(id: "synthetic-pegasus", rule: "synthetic-one", value: "pegasus-synthetic.invalid", source: "synthetic.log", record: "line 1", matchType: "raw-text", explanation: "Synthetic UI fixture", excerpt: "Synthetic first payload", campaigns: ["Pegasus"]),
+                Finding(id: "synthetic-darksword", rule: "synthetic-two", value: "darksword-synthetic.invalid", source: "synthetic.log", record: "line 2", matchType: "raw-text", explanation: "Synthetic UI fixture", excerpt: "Synthetic second payload", campaigns: ["DarkSword"])
+            ]
+            reports = [report]
+            showCompletedCase(report.caseID)
+        }
+    }
+    #endif
     func load() {
         reports = ((try? FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)) ?? []).compactMap { try? JSONDecoder().decode(Report.self, from: Data(contentsOf: $0.appendingPathComponent("checkpoint.json"))) }.sorted { $0.createdAt > $1.createdAt }
         loadInbox()
@@ -77,7 +119,7 @@ struct LocalVerifyApp: App {
     }
     func importIndicators(_ url: URL) {
         guard !busy else { return }
-        busy = true; canCancel = false; progress = "Loading threat indicators…"
+        busy = true; canCancel = false; activityTitle = "Loading indicators"; progress = "Loading threat indicators…"
         let worker = Task.detached(priority: .userInitiated) {
             let access = url.startAccessingSecurityScopedResource(); defer { if access { url.stopAccessingSecurityScopedResource() } }
             let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
@@ -93,7 +135,7 @@ struct LocalVerifyApp: App {
         }
     }
     func startImport(_ url: URL) {
-        guard !busy else { return }; busy = true; canCancel = true; progress = "Preparing archive import…"
+        guard !busy else { return }; busy = true; canCancel = true; activityTitle = "Importing diagnostics"; progress = "Preparing archive import…"
         let selected = indicators; let root = root
         let worker = Task.detached(priority: .userInitiated) {
                     let access = url.startAccessingSecurityScopedResource(); defer { if access { url.stopAccessingSecurityScopedResource() } }
@@ -108,6 +150,7 @@ struct LocalVerifyApp: App {
                         }
                         try FileManager.default.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: destination.path)
                         var report = Report(caseID: id, indicators: selected)
+                        report.sysdiagnoseFilename = url.lastPathComponent
                         let indicatorURL = folder.appendingPathComponent("indicators.json")
                         try LocalStorage.write(JSONEncoder().encode(selected), to: indicatorURL)
                         report.indicatorSHA256 = try Archive.hash(indicatorURL)
@@ -125,7 +168,7 @@ struct LocalVerifyApp: App {
         }
     }
     func run(_ report: Report) {
-        guard !busy else { return }; busy = true; canCancel = true; progress = "Hashing and analyzing…"
+        guard !busy else { return }; busy = true; canCancel = true; activityTitle = "Analyzing diagnostics"; progress = "Hashing and analyzing…"
         let dir = folder(report.caseID)
         let worker = Task.detached(priority: .userInitiated) { [weak self] in
             let setURL = dir.appendingPathComponent("indicators.json")
@@ -141,7 +184,13 @@ struct LocalVerifyApp: App {
             do { _ = try await withTaskCancellationHandler(operation: { try await worker.value }, onCancel: { worker.cancel() }) }
             catch { message = error.localizedDescription }
             busy = false; canCancel = false; load()
+            showCompletedCase(report.caseID)
         }
+    }
+    func showCompletedCase(_ id: String) {
+        guard reports.contains(where: { $0.caseID == id }) else { return }
+        selectedTab = .cases
+        casePath = [id]
     }
     func cancel() { job?.cancel() }
     func deleteInbox(_ url: URL) {
@@ -153,7 +202,7 @@ struct LocalVerifyApp: App {
         do { try FileManager.default.removeItem(at: folder(report.caseID)); load() } catch { message = error.localizedDescription }
     }
     func export(_ report: Report, includeOriginal: Bool) async -> URL? {
-        guard !busy else { return nil }; busy = true; canCancel = false; progress = "Preparing export…"; defer { busy = false }
+        guard !busy else { return nil }; busy = true; canCancel = false; activityTitle = "Preparing case export"; progress = "Preparing export…"; defer { busy = false }
         let dir = folder(report.caseID)
         do {
             return try await Task.detached {
@@ -168,16 +217,49 @@ struct LocalVerifyApp: App {
 struct ContentView: View {
     @ObservedObject var model: CaseStore
     var body: some View {
-        TabView {
+        TabView(selection: $model.selectedTab) {
             ScanView(model: model)
                 .tabItem { Label("Scan", systemImage: "magnifyingglass") }
+                .tag(CaseStore.Tab.scan)
             CasesView(model: model)
                 .tabItem { Label("Cases", systemImage: "tray.full") }
+                .tag(CaseStore.Tab.cases)
             IndicatorsView(model: model)
                 .tabItem { Label("Indicators", systemImage: "shield.lefthalf.filled") }
+                .tag(CaseStore.Tab.indicators)
             AboutView()
                 .tabItem { Label("About", systemImage: "info.circle") }
+                .tag(CaseStore.Tab.about)
         }
+    }
+}
+
+struct WorkProgressPanel: View {
+    @ObservedObject var model: CaseStore
+    private var details: [String] { model.progress.components(separatedBy: " · ") }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 12) {
+                ProgressView().controlSize(.large)
+                Text(model.activityTitle).font(.title2.bold())
+            }
+            Text(details.first ?? model.progress).font(.headline).fixedSize(horizontal: false, vertical: true)
+            if details.count > 1 {
+                Text(details.dropFirst().joined(separator: "\n"))
+                    .font(.body.monospacedDigit()).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Text("Keep Local Verify open. Processing stays on this iPhone.").font(.footnote).foregroundStyle(.secondary)
+            if model.canCancel {
+                Button("Cancel", role: .cancel) { model.cancel() }
+                    .buttonStyle(.bordered).controlSize(.large)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .background(.regularMaterial)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("importStatus")
     }
 }
 
@@ -212,18 +294,7 @@ struct ScanView: View {
                 if !model.message.isEmpty { Section { Text(model.message).foregroundStyle(.orange) } }
             }.navigationTitle("Scan")
             .safeAreaInset(edge: .bottom) {
-                if model.busy {
-                    HStack(spacing: 12) {
-                        ProgressView()
-                        Text(model.progress).lineLimit(2)
-                        Spacer(minLength: 0)
-                        if model.canCancel { Button("Cancel") { model.cancel() } }
-                    }
-                    .padding(12)
-                    .background(.regularMaterial)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityIdentifier("importStatus")
-                }
+                if model.busy { WorkProgressPanel(model: model) }
             }
             .fileImporter(isPresented: $importing, allowedContentTypes: [.data]) { result in
                 do {
@@ -270,18 +341,7 @@ struct IndicatorsView: View {
             }
             .navigationTitle("Indicators")
             .safeAreaInset(edge: .bottom) {
-                if model.busy {
-                    HStack(spacing: 12) {
-                        ProgressView()
-                        Text(model.progress).lineLimit(2)
-                        Spacer(minLength: 0)
-                        if model.canCancel { Button("Cancel") { model.cancel() } }
-                    }
-                    .padding(12)
-                    .background(.regularMaterial)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityIdentifier("importStatus")
-                }
+                if model.busy { WorkProgressPanel(model: model) }
             }
             .fileImporter(isPresented: $importing, allowedContentTypes: [.data]) { result in
                 do { model.importIndicators(try result.get()) }
@@ -293,19 +353,13 @@ struct IndicatorsView: View {
 struct CasesView: View {
     @ObservedObject var model: CaseStore
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $model.casePath) {
             List {
-                if model.busy {
-                    Section {
-                        ProgressView(model.progress)
-                        if model.canCancel { Button("Cancel", systemImage: "xmark.circle") { model.cancel() } }
-                    }
-                }
                 if model.reports.isEmpty {
                     ContentUnavailableView("No cases yet", systemImage: "tray", description: Text("Import diagnostics in Scan. Your local cases and findings will appear here."))
                 } else {
                     ForEach(model.reports, id: \.caseID) { report in
-                        NavigationLink { CaseView(model: model, id: report.caseID) } label: {
+                        NavigationLink(value: report.caseID) {
                             Label {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(report.status)
@@ -317,6 +371,8 @@ struct CasesView: View {
                     }
                 }
             }.navigationTitle("Cases")
+                .navigationDestination(for: String.self) { id in CaseView(model: model, id: id) }
+                .safeAreaInset(edge: .bottom) { if model.busy { WorkProgressPanel(model: model) } }
         }
     }
 }
@@ -373,19 +429,61 @@ struct CaseView: View {
     @State private var original = false
     @State private var exportURL: URL?
     @State private var confirmDelete = false
+    @State private var copiedItem: String?
+    @State private var copyMessage = ""
+    @State private var campaignFilter = "All leads"
     @Environment(\.dismiss) private var dismiss
+    private func timestamp(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd HH:mm"
+        return formatter.string(from: date)
+    }
+    private func copy(_ text: String, item: String) {
+        UIPasteboard.general.setItems([[UTType.utf8PlainText.identifier: text]], options: [.localOnly: true, .expirationDate: Date().addingTimeInterval(300)])
+        copiedItem = item
+        copyMessage = "Copied. Paste on this iPhone within 5 minutes."
+    }
     var body: some View {
-        if let report = model.reports.first(where: { $0.caseID == id }) {
+        if let savedReport = model.reports.first(where: { $0.caseID == id }) {
+            let report = model.labeledReport(savedReport)
+            let filtered = report.findings.filter { campaignFilter == "All leads" || ($0.campaigns ?? ["Uncategorized"]).contains(campaignFilter) }
             List {
                 Section(report.status) {
                     Text("Experimental triage; review all leads in context.")
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Sysdiagnose file").font(.caption).foregroundStyle(.secondary)
+                        Text(report.sysdiagnoseFilename ?? "Filename not recorded for this older case").textSelection(.enabled)
+                    }.accessibilityIdentifier("caseFilename")
+                    LabeledContent("Analysis started", value: report.analysisStartedAt.map(timestamp) ?? "Not recorded")
+                    LabeledContent("Analysis finished", value: report.analysisFinishedAt.map(timestamp) ?? (report.completed ? "Not recorded" : "Not finished"))
+                    Text("Times shown in device local time.").font(.caption).foregroundStyle(.secondary)
                     Text("SHA-256: \(report.archiveSHA256)").font(.caption).textSelection(.enabled)
-                    Text(report.indicatorVersion).font(.caption)
+                    DisclosureGroup("Definition details") { Text(report.indicatorVersion).font(.caption).textSelection(.enabled) }
                     if !report.completed { Button("Resume analysis") { model.run(report) }.disabled(model.busy) }
+                }
+                Section("Copy case data") {
+                    Button(copiedItem == "case" ? "Copied case report" : "Copy case report", systemImage: "doc.on.doc") {
+                        do { copy(String(decoding: try Export.json(report), as: UTF8.self), item: "case") }
+                        catch { copyMessage = "Could not prepare report: \(error.localizedDescription)" }
+                    }.accessibilityIdentifier("copyCaseReport")
+                    Button(copiedItem == "all" ? "Copied all payloads" : "Copy all payloads", systemImage: "doc.on.doc") {
+                        copy(Export.payloadsText(report), item: "all")
+                    }.disabled(report.findings.isEmpty).accessibilityIdentifier("copyAllPayloads")
+                    Text("Payloads are the displayed finding excerpts with source details, not complete archived files. Copies stay on this iPhone's clipboard for 5 minutes and do not use Universal Clipboard. Anything you paste elsewhere is a separate copy.").font(.footnote).foregroundStyle(.secondary)
+                    if !copyMessage.isEmpty { Text(copyMessage).font(.footnote).accessibilityIdentifier("copyConfirmation") }
                 }
                 Section("Matches for review") {
                     Text(report.matchReviewSummary).font(.footnote).foregroundStyle(.secondary)
-                    ForEach(report.findings) { finding in
+                    Picker("Campaign", selection: $campaignFilter) {
+                        Text("All leads (\(report.findings.count))").tag("All leads")
+                        ForEach(["Pegasus", "Predator", "Coruna", "DarkSword", "Uncategorized"], id: \.self) { campaign in
+                            Text("\(campaign) (\(report.findings.filter { ($0.campaigns ?? ["Uncategorized"]).contains(campaign) }.count))").tag(campaign)
+                        }
+                    }.pickerStyle(.menu).accessibilityIdentifier("campaignFilter")
+                    Text("Campaign groups come from published indicator metadata, not confirmed attribution. Older findings without matching metadata remain Uncategorized. Copy all payloads includes every lead, regardless of this filter.").font(.footnote).foregroundStyle(.secondary)
+                    if filtered.isEmpty { Text("No leads in this group.").foregroundStyle(.secondary) }
+                    ForEach(filtered) { finding in
                         VStack(alignment: .leading, spacing: 6) {
                             Text(finding.value).font(finding.isAmbiguousTextMatch ? .body : .headline)
                                 .foregroundStyle(finding.isAmbiguousTextMatch ? .secondary : .primary)
@@ -393,6 +491,7 @@ struct CaseView: View {
                             if finding.isAmbiguousTextMatch {
                                 Text("Short text match — especially ambiguous").font(.caption).foregroundStyle(.secondary)
                             }
+                            Text((finding.campaigns ?? ["Uncategorized"]).joined(separator: ", ")).font(.subheadline).foregroundStyle(.secondary)
                             Text("\(finding.matchType) · \(finding.rule)").font(.caption)
                             Text("\(finding.source) — \(finding.record)").font(.caption)
                             Text(finding.explanation).font(.footnote)
@@ -404,6 +503,11 @@ struct CaseView: View {
                                 }
                             }
                             Text(finding.excerpt).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
+                            Button(copiedItem == finding.id ? "Copied payload" : "Copy payload", systemImage: "doc.on.doc") {
+                                copy(Export.payloadText(finding), item: finding.id)
+                            }
+                            .buttonStyle(.borderless)
+                            .accessibilityIdentifier("copyPayload-\(finding.id)")
                         }
                     }
                 }
@@ -415,7 +519,9 @@ struct CaseView: View {
                     if let exportURL { ShareLink("Share report ZIP", item: exportURL) }
                 }
                 Section { Button("Delete case and local export", role: .destructive) { confirmDelete = true }.disabled(model.busy) }
-            }.navigationTitle("Case").confirmationDialog("Delete this case permanently? Exported copies elsewhere will remain.", isPresented: $confirmDelete) { Button("Delete", role: .destructive) { model.delete(report); dismiss() } }
+            }.navigationTitle("Case")
+                .safeAreaInset(edge: .bottom) { if model.busy { WorkProgressPanel(model: model) } }
+                .confirmationDialog("Delete this case permanently? Exported copies elsewhere will remain.", isPresented: $confirmDelete) { Button("Delete", role: .destructive) { model.delete(report); dismiss() } }
         }
     }
 }

@@ -1,6 +1,38 @@
 import XCTest
 
 final class ImportPickerTests: XCTestCase {
+    func testCaseCopiesFiltersAndAutomaticNavigation() {
+        let app = XCUIApplication(); app.launchArguments += ["--synthetic-case"]; app.launch()
+        XCTAssertTrue(app.navigationBars["Case"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["sysdiagnose_synthetic_ui.tar.gz"].exists)
+        let copyReport = app.buttons["copyCaseReport"]
+        for _ in 0..<6 where !copyReport.isHittable { app.swipeUp() }
+        copyReport.tap()
+        XCTAssertTrue(copyReport.label.contains("Copied"))
+        let copyAll = app.buttons["copyAllPayloads"]
+        for _ in 0..<4 where !copyAll.isHittable { app.swipeUp() }
+        copyAll.tap()
+        XCTAssertTrue(app.buttons["copyAllPayloads"].label.contains("Copied"))
+        let filter = app.buttons["campaignFilter"]
+        for _ in 0..<6 where !filter.isHittable { app.swipeUp() }
+        filter.tap()
+        app.buttons["DarkSword (1)"].tap()
+        XCTAssertFalse(app.staticTexts["pegasus-synthetic.invalid"].exists)
+        let copyPayload = app.buttons["copyPayload-synthetic-darksword"]
+        for _ in 0..<6 where !copyPayload.isHittable { app.swipeUp() }
+        copyPayload.tap()
+        XCTAssertTrue(copyPayload.label.contains("Copied"))
+    }
+    func testLargeProgressPanel() {
+        let app = XCUIApplication(); app.launchArguments += ["--synthetic-progress"]; app.launch()
+        XCTAssertTrue(app.staticTexts["Analyzing diagnostics"].exists)
+        XCTAssertTrue(app.staticTexts["Checking definitions 1240/2336"].exists)
+        let panel = app.otherElements["importStatus"]
+        XCTAssertTrue(panel.exists)
+        XCTAssertGreaterThan(panel.frame.height, 200)
+        XCTAssertTrue(app.buttons["Cancel"].isHittable)
+    }
+
     func testAssistiveTouchShortcutOpensSettings() throws {
         guard #available(iOS 26.0, *) else { throw XCTSkip("AssistiveTouch deep link requires iOS 26") }
         let app = XCUIApplication(); app.launch()

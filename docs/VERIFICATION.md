@@ -38,6 +38,13 @@ The local SAF iOS 15 sample used during initial verification was obtained from [
 - Progress reports hashing, decompression (including skipped entries), and work inside a file, throttled to four updates per second. Checkpoint writes remain separate from visual progress.
 - 23 core tests executed, zero failures; optional live network and real-archive tests skipped. No actual phone sysdiagnose archives, extracted evidence, case containers, or exports were copied to the MacBook. This restriction is recorded in AGENTS.md.
 
+### Case copying, campaign filters and progress — 2026-09-05
+
+- Added individual excerpt and all-payload copy actions with source context, plus JSON case copying. Clipboard items are local-only and expire after five minutes; pasted copies are independent.
+- Added campaign filtering, a larger progress panel, automatic case navigation after analysis, and recorded archive filename and analysis timestamps. Older missing metadata is shown as unavailable.
+- 29 core tests executed with zero failures and two optional tests skipped. Synthetic simulator UI checks passed for automatic case navigation, filename display, case/all/individual copying, DarkSword filtering, and a progress panel taller than 200 points with a reachable Cancel button.
+- Signed iPhone build succeeded. These checks used synthetic fixtures only; no phone evidence was transferred to the MacBook. Physical-device workflow and detection-effectiveness gates below remain outstanding.
+
 ### Remaining physical-device checks
 
 Before investigator deployment, complete and record:

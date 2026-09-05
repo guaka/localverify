@@ -64,6 +64,9 @@ final class TriageCoreTests: XCTestCase {
         let initial = Report(caseID: "fixture", indicators: .demo)
         let report = try Analyzer.analyze(archive: archive, indicators: .demo, previous: initial) { _ in }
         XCTAssertTrue(report.completed, report.errors.joined()); XCTAssertEqual(report.findings.count, 1)
+        XCTAssertNotNil(report.analysisStartedAt)
+        XCTAssertNotNil(report.analysisFinishedAt)
+        XCTAssertGreaterThanOrEqual(report.analysisFinishedAt!, report.analysisStartedAt!)
         let resumed = try Analyzer.analyze(archive: archive, indicators: .demo, previous: report) { _ in }
         XCTAssertEqual(resumed.findings.count, 1); XCTAssertEqual(try Archive.hash(archive), digest)
         let zip = dir.appendingPathComponent("export.zip")

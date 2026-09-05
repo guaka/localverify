@@ -4,6 +4,8 @@ The app contains no upload client, remote analysis service, analytics SDK, telem
 
 App-owned cases, originals, indicator snapshots, checkpoints, and exports are excluded from automatic backup. iOS files use complete file protection. Share-extension inbox files are protected and their directory excluded from backup; interrupted copies are listed for explicit deletion.
 
+Case copy buttons write only after a user tap: either the JSON report or finding excerpts with source context. Clipboard entries are marked local-only (Universal Clipboard disabled) and expire after five minutes. A user can paste into another app; that destination's copies and network behavior are outside Local Verify's control. Copying payloads does not extract complete archived files.
+
 The `Documents/Imports` folder is deliberately visible as On My iPhone → Local Verify → Imports in Files (and through local Finder file sharing). It is a local staging area, also excluded from backup. Private cases and reports remain in Application Support and are not exposed through that folder.
 
 An export leaves the sandbox only when the user invokes sharing and chooses a destination. Export ZIPs are not independently encrypted: protect them when choosing recipients or storage. Original evidence is included only when explicitly selected. Copies exported to another app or cloud provider are outside Local Verify's control.
