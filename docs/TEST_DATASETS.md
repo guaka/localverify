@@ -1,6 +1,6 @@
 # Public mobile-forensics test data
 
-This note lists reputable, lawful sources for exercising Triage's import and matching workflow. Use only data you are authorized to possess. Treat all device extractions as sensitive evidence: they can contain identifiers, location history, account details, messages, and network metadata.
+This note lists reputable, lawful sources for exercising Local Verify's import and matching workflow. Use only data you are authorized to possess. Treat all device extractions as sensitive evidence: they can contain identifiers, location history, account details, messages, and network metadata.
 
 ## Important limitation: confirmed compromise samples
 

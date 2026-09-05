@@ -2,7 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 @main
-struct TriageApp: App {
+struct LocalVerifyApp: App {
     @StateObject private var model = CaseStore()
     var body: some Scene {
         WindowGroup {

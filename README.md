@@ -1,5 +1,7 @@
 # Local Verify — native iOS investigator prototype
 
+<img src="iOS/App/Assets.xcassets/AppIcon.appiconset/app-icon.png" alt="Local Verify app icon" width="128">
+
 Swift/SwiftUI iOS 17+ application and import-only share extension. Processing is local; no backend or telemetry. Android remains a documented second phase in [docs/ANDROID.md](docs/ANDROID.md).
 
 **Experimental:** this is a focused diagnostics parser, not full MVT parity. The app bundles 1.49 MB of Amnesty Pegasus and Predator/Cytrox indicators for offline use. It supports 1,862 definitions in the current snapshot and explicitly skips 30 unsupported definitions. Historical indicators do not provide comprehensive current-spyware coverage. Device installation and synthetic tests are documented separately from real-world detection validation.
@@ -11,10 +13,10 @@ Requires Xcode 16+ and Python 3 only for deterministic project generation (no Py
 ```
 python3 tools/generate_project.py
 swift test
-xcodebuild -project Triage.xcodeproj -scheme Triage -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build
+xcodebuild -project LocalVerify.xcodeproj -scheme LocalVerify -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build
 ```
 
-Open `Triage.xcodeproj` in Xcode. For installation on a physical iPhone, select your development team for both targets, register the phone, and provision the App Group `group.org.mobiletriage.private`. If changing identifiers, update both Swift app-group strings and `iOS/Triage.entitlements`, plus the generator's bundle identifiers. Build and run the Triage scheme. Unsigned simulator/device builds cannot be installed as provisioned private device builds.
+Open `LocalVerify.xcodeproj` in Xcode. For installation on a physical iPhone, select your development team for both targets, register the phone, and provision the App Group `group.org.mobiletriage.private`. If changing identifiers, update both Swift app-group strings and `iOS/LocalVerify.entitlements`, plus the generator's bundle identifiers. Build and run the LocalVerify scheme. Unsigned simulator/device builds cannot be installed as provisioned private device builds.
 
 Distribute the source with private builds, including LICENSE and third-party notices. Source availability is part of distribution, not an in-app network dependency.
 
@@ -22,15 +24,15 @@ Distribute the source with private builds, including LICENSE and third-party not
 
 ### Files-only iPhone build
 
-`python3 tools/generate_project.py --local-only` creates `TriageLocal.xcodeproj`. This preserves the full project but omits App Groups and the share extension, allowing signing with an existing wildcard development profile. Use Save to Files → On My iPhone, then import in Triage. The full share extension requires an App Groups-enabled profile and a signed-in Xcode developer account to provision it.
+`python3 tools/generate_project.py --local-only` creates `LocalVerifyLocal.xcodeproj`. This preserves the full project but omits App Groups and the share extension, allowing signing with an existing wildcard development profile. Use Save to Files → On My iPhone, then import in Local Verify. The full share extension requires an App Groups-enabled profile and a signed-in Xcode developer account to provision it.
 
-The Files-only build was installed and launched on `ip2` using Trustroots Foundation (`SUJ594N47C`). Rebuild with automatic signing and `DEVELOPMENT_TEAM=SUJ594N47C`; the existing profile is Xcode-managed, so do not force manual signing. The signed app is under `build/iphone-local/Build/Products/Debug-iphoneos/Triage.app`.
+The Files-only build was installed and launched on `ip2` using Trustroots Foundation (`SUJ594N47C`). Rebuild with automatic signing and `DEVELOPMENT_TEAM=SUJ594N47C`; the existing profile is Xcode-managed, so do not force manual signing. The signed app is under `build/iphone-local/Build/Products/Debug-iphoneos/LocalVerify.app`.
 
 No network upload code is included. See [privacy details](docs/PRIVACY.md).
 
 The home screen includes an offline **How to collect and export sysdiagnose** guide. Its local save destination is **On My iPhone → Local Verify → Imports**. Import opens the system file picker; it does not generate diagnostics. Archive and indicator selection intentionally use a single picker presentation to avoid competing SwiftUI import sheets.
 
-UI regression checks can be generated with `python3 tools/generate_project.py --local-only --ui-tests` and run using the `TriageChecks` scheme on an iPhone simulator.
+UI regression checks can be generated with `python3 tools/generate_project.py --local-only --ui-tests` and run using the `LocalVerifyChecks` scheme on an iPhone simulator.
 
 Confirm data-owner consent, follow the collection guide, and import a sysdiagnose archive. Imported cases freeze their indicator set so resumed analysis remains reproducible. Results distinguish structured matches from contextual raw-text matches; every lead points to a file and record. Share a report ZIP manually, optionally with original evidence. Delete cases in their detail screen.
 

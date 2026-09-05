@@ -52,7 +52,7 @@ def main():
         payloads[name + ".stix2"] = data
         manifest["files"].append(dict(name=name, path=path, bytes=len(data), sha256=digest, url=url))
         print(name, len(data), digest)
-    attribution = f"Indicators by Amnesty International. {SOURCE}\nCC BY 2.0: https://creativecommons.org/licenses/by/2.0/\nUnmodified source bundles; Triage uses a supported subset. No endorsement implied.\nRevision: {revision}\nRetrieved: {manifest['downloadedAt']}\n"
+    attribution = f"Indicators by Amnesty International. {SOURCE}\nCC BY 2.0: https://creativecommons.org/licenses/by/2.0/\nUnmodified source bundles; Local Verify uses a supported subset. No endorsement implied.\nRevision: {revision}\nRetrieved: {manifest['downloadedAt']}\n"
     attribution += "\n".join(f"{f['path']}\nSHA-256 {f['sha256']}\n{f['url']}" for f in manifest["files"])
     payloads["ATTRIBUTION.txt"] = attribution.encode()
     payloads["threat-manifest.json"] = (json.dumps(manifest, indent=2) + "\n").encode()

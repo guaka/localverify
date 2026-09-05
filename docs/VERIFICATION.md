@@ -15,7 +15,7 @@ The local SAF iOS 15 sample used during initial verification was obtained from [
 - Native iOS app and share extension compile with Xcode 26.6 for the iOS simulator.
 - App installed and launched on the iPhone 17 Pro / iOS 26.5 simulator; initial screen visually inspected.
 - Swift core tests pass, including cancellation and refusal to resume changed evidence.
-- Unsigned iPhone Release archive builds at `build/Triage.xcarchive`; it requires provisioning/signing before installation on a phone.
+- Unsigned iPhone Release archive builds at `build/LocalVerify.xcarchive`; it requires provisioning/signing before installation on a phone.
 - Files-only build signed with Trustroots Foundation, installed and launched on the paired iPhone 15 Pro Max (`ip2`) on 2026-09-05.
 - 10 Swift core tests pass, including explicit backup exclusion for local files. Device installation/launch does not yet establish real sysdiagnose analysis coverage.
 - Real sysdiagnose sample evaluation and confirmed-positive validation remain outstanding.
