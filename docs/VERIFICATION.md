@@ -31,7 +31,14 @@ The local SAF iOS 15 sample used during initial verification was obtained from [
 - 18 core tests run, zero failures, one optional real-archive test skipped. Includes traceable seeded matches from both 2026 collections, benign domain-suffix checks, all-or-nothing five-feed live download, de-duplication and cache upgrade while preserving manual imports. This is behavior validation, not confirmed-positive detection validation.
 - Collection-guide and Settings-navigation simulator tests pass. The simulator omits AssistiveTouch and lands on the Accessibility root; the test explicitly checks this fallback. The app uses Apple's public iOS 26+ AssistiveTouch API, retains manual instructions, and does not toggle any settings. Exact physical-device destination still needs a user check. Analytics Data has no documented public deep link.
 
-### Remaining release gate
+### Analysis stall regression — 2026-09-05
+
+- Reproduced slow scanning with a generated 248,000-byte log and all 2,336 indicators: approximately 7.61 seconds before the change, 0.04 seconds afterward on the development Mac (debug build). A generated 15,500,000-byte log completed in approximately 2.10 seconds. These are synthetic software timings, not measured iPhone throughput.
+- Matching now indexes sought ASCII tokens and recognized structured fields, retaining regex matching for candidate and non-token literals. Regression tests compare Unicode/case/boundary behavior and cover cancellation while indexing.
+- Progress reports hashing, decompression (including skipped entries), and work inside a file, throttled to four updates per second. Checkpoint writes remain separate from visual progress.
+- 23 core tests executed, zero failures; optional live network and real-archive tests skipped. No actual phone sysdiagnose archives, extracted evidence, case containers, or exports were copied to the MacBook. This restriction is recorded in AGENTS.md.
+
+### Remaining physical-device checks
 
 Before investigator deployment, complete and record:
 

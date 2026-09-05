@@ -15,26 +15,31 @@ public enum Archive {
             progress?(size)
         }
     }
-    public static func hash(_ url: URL) throws -> String {
+    public static func hash(_ url: URL, progress: ((Int) -> Void)? = nil) throws -> String {
         let handle = try FileHandle(forReadingFrom: url); defer { try? handle.close() }
         var hash = SHA256()
-        while let chunk = try handle.read(upToCount: 1024 * 1024), !chunk.isEmpty { try Task.checkCancellation(); hash.update(data: chunk) }
+        var bytes = 0
+        while let chunk = try handle.read(upToCount: 1024 * 1024), !chunk.isEmpty {
+            try Task.checkCancellation(); hash.update(data: chunk); bytes += chunk.count; progress?(bytes)
+        }
         return hash.finalize().map { String(format: "%02x", $0) }.joined()
     }
     public static func safePath(_ path: String) -> Bool {
         !path.isEmpty && !path.hasPrefix("/") && !path.contains("\\") && !path.split(separator: "/", omittingEmptySubsequences: false).contains("..")
     }
     // No files are extracted: bounded regular-file payloads are passed directly to parsers.
-    public static func walk(_ url: URL, visit: (String, Data?, String?) throws -> Void) throws {
+    public static func walk(_ url: URL, progress: ((Int64, String?) -> Void)? = nil, visit: (String, Data?, String?) throws -> Void) throws {
         guard let gz = gzopen(url.path, "rb") else { throw TriageError.invalid("Cannot open archive") }
         defer { gzclose(gz) }
         var expanded: Int64 = 0; var entries = 0; var regularPaths = Set<String>()
+        var currentPath: String?
         func read(_ count: Int) throws -> Data {
             try Task.checkCancellation()
             var result = Data(count: count)
             let n = result.withUnsafeMutableBytes { gzread(gz, $0.baseAddress, UInt32(count)) }
             guard n == count else { throw TriageError.invalid("Truncated or corrupt gzip/tar archive") }
             expanded += Int64(n)
+            progress?(expanded, currentPath)
             guard expanded <= 8 * 1024 * 1024 * 1024 else { throw TriageError.invalid("Archive exceeds 8 GiB expanded limit") }
             return result
         }
@@ -56,6 +61,7 @@ public enum Archive {
                     guard n >= 0 else { throw TriageError.invalid("Invalid gzip checksum") }
                     if n == 0 { break }
                     expanded += Int64(n)
+                    progress?(expanded, currentPath)
                     guard expanded <= 8 * 1024 * 1024 * 1024, buffer.prefix(Int(n)).allSatisfy({ $0 == 0 }) else { throw TriageError.invalid("Unexpected trailing archive data") }
                 }
                 break
@@ -69,6 +75,7 @@ public enum Archive {
             let name = string(header, 0..<100)
             let path = prefix.isEmpty ? name : prefix + "/" + name
             guard safePath(path) else { throw TriageError.invalid("Unsafe archive path") }
+            currentPath = path
             guard let size = Int(string(header, 124..<136).trimmingCharacters(in: .whitespacesAndNewlines), radix: 8), size >= 0, size <= 8 * 1024 * 1024 * 1024 else { throw TriageError.invalid("Invalid tar entry size") }
             let regular = header[156] == 0 || header[156] == 48
             if regular && !regularPaths.insert(path).inserted { throw TriageError.invalid("Duplicate archive path; cannot resume unambiguously") }

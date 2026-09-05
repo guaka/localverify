@@ -131,9 +131,10 @@ struct LocalVerifyApp: App {
             let setURL = dir.appendingPathComponent("indicators.json")
             let set = try JSONDecoder().decode(IndicatorSet.self, from: Data(contentsOf: setURL))
             guard try Archive.hash(setURL) == report.indicatorSHA256 else { throw TriageError.invalid("Case indicator set changed") }
-            return try Analyzer.analyze(archive: dir.appendingPathComponent("original.tar.gz"), indicators: set, previous: report) { checkpoint in
+            return try Analyzer.analyze(archive: dir.appendingPathComponent("original.tar.gz"), indicators: set, previous: report, progress: { detail in
+                Task { @MainActor [weak self] in self?.progress = detail }
+            }) { checkpoint in
                 try LocalStorage.write(JSONEncoder().encode(checkpoint), to: dir.appendingPathComponent("checkpoint.json"))
-                Task { @MainActor [weak self] in self?.progress = "\(checkpoint.analyzed.count) files analyzed · \(checkpoint.findings.count) leads" }
             }
         }
         job = Task {
