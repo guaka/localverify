@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 struct TriageApp: App {
     @StateObject private var model = CaseStore()
     var body: some Scene {
-        WindowGroup { ContentView(model: model).onAppear { model.load() }.onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in model.loadInbox() } }
+        WindowGroup { ContentView(model: model).tint(Color("AccentColor")).onAppear { model.load() }.onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in model.loadInbox() } }
     }
 }
 
@@ -139,7 +139,7 @@ struct ContentView: View {
                     NavigationLink { CollectionGuide() } label: {
                         Label("How to collect and export sysdiagnose", systemImage: "list.number")
                     }.accessibilityIdentifier("collectionGuide")
-                    Text("Generate the archive in iOS, save it to On My iPhone → Triage → Imports, then import it below. No computer is needed.").font(.footnote)
+                    Text("Generate the archive in iOS, save it to On My iPhone → Local Verify → Imports, then import it below. No computer is needed.").font(.footnote)
                 }
                 Section("2 · Consent and import") {
                     Text("Archives may contain sensitive personal data. Cases remain on this phone until deleted and are excluded from automatic backup. Exported copies are controlled by their recipient.").font(.footnote)
@@ -171,7 +171,7 @@ struct ContentView: View {
                         ScrollView { Text((Bundle.main.url(forResource: "LICENSE", withExtension: nil).flatMap { try? String(contentsOf: $0) }) ?? "See LICENSE in the supplied source distribution.").font(.caption).padding() }.navigationTitle("MVT License 1.1")
                     }
                 }
-            }.navigationTitle("Triage")
+            }.navigationTitle("Local Verify")
             .fileImporter(isPresented: $importing, allowedContentTypes: [.data]) { result in
                 do {
                     let url = try result.get()

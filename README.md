@@ -1,4 +1,4 @@
-# Triage — native iOS investigator prototype
+# Local Verify — native iOS investigator prototype
 
 Swift/SwiftUI iOS 17+ application and import-only share extension. Processing is local; no backend or telemetry. Android remains a documented second phase in [docs/ANDROID.md](docs/ANDROID.md).
 
@@ -28,7 +28,7 @@ The Files-only build was installed and launched on `ip2` using Trustroots Founda
 
 No network upload code is included. See [privacy details](docs/PRIVACY.md).
 
-The home screen includes an offline **How to collect and export sysdiagnose** guide. Its local save destination is **On My iPhone → Triage → Imports**. Import opens the system file picker; it does not generate diagnostics. Archive and indicator selection intentionally use a single picker presentation to avoid competing SwiftUI import sheets.
+The home screen includes an offline **How to collect and export sysdiagnose** guide. Its local save destination is **On My iPhone → Local Verify → Imports**. Import opens the system file picker; it does not generate diagnostics. Archive and indicator selection intentionally use a single picker presentation to avoid competing SwiftUI import sheets.
 
 UI regression checks can be generated with `python3 tools/generate_project.py --local-only --ui-tests` and run using the `TriageChecks` scheme on an iPhone simulator.
 

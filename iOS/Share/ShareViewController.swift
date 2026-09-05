@@ -7,8 +7,8 @@ final class ShareViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad(); view.backgroundColor = .systemBackground
         label.numberOfLines = 0; label.textAlignment = .center
-        label.text = "Import this diagnostic archive? It will be stored locally until you analyze or delete it in Triage."
-        let button = UIButton(type: .system); button.setTitle("Save to Triage", for: .normal); button.addTarget(self, action: #selector(save), for: .touchUpInside)
+        label.text = "Import this diagnostic archive? It will be stored locally until you analyze or delete it in Local Verify."
+        let button = UIButton(type: .system); button.setTitle("Save to Local Verify", for: .normal); button.addTarget(self, action: #selector(save), for: .touchUpInside)
         let cancel = UIButton(type: .system); cancel.setTitle("Close", for: .normal); cancel.addTarget(self, action: #selector(close), for: .touchUpInside)
         let stack = UIStackView(arrangedSubviews: [label, button, cancel]); stack.axis = .vertical; stack.spacing = 24; stack.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(stack); NSLayoutConstraint.activate([stack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24), stack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24), stack.centerYAnchor.constraint(equalTo: view.centerYAnchor)])
@@ -43,7 +43,7 @@ final class ShareViewController: UIViewController {
                 }
                 try output.close()
                 try FileManager.default.moveItem(at: partial, to: target)
-                DispatchQueue.main.async { self?.label.text = "Saved. Open Triage to confirm consent and analyze." }
+                DispatchQueue.main.async { self?.label.text = "Saved. Open Local Verify to confirm consent and analyze." }
             } catch { DispatchQueue.main.async { self?.saving = false; self?.label.text = "Import failed: \(error.localizedDescription)" } }
         }
     }
