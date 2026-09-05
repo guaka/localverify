@@ -1,6 +1,25 @@
 import XCTest
 
 final class ImportPickerTests: XCTestCase {
+    func testAssistiveTouchShortcutOpensSettings() throws {
+        guard #available(iOS 26.0, *) else { throw XCTSkip("AssistiveTouch deep link requires iOS 26") }
+        let app = XCUIApplication(); app.launch()
+        app.buttons["collectionGuide"].tap()
+        let shortcut = app.buttons["openAssistiveTouchSettings"]
+        for _ in 0..<5 where !shortcut.isHittable { app.swipeUp() }
+        shortcut.tap()
+        let settings = XCUIApplication(bundleIdentifier: "com.apple.Preferences")
+        XCTAssertTrue(settings.wait(for: .runningForeground, timeout: 10), app.debugDescription)
+        #if targetEnvironment(simulator)
+        // The simulator omits Touch/AssistiveTouch and lands on Accessibility instead.
+        XCTAssertTrue(settings.otherElements["AccessibilitySettingsControllerView"].waitForExistence(timeout: 5), settings.debugDescription)
+        #else
+        XCTAssertTrue(settings.navigationBars["AssistiveTouch"].waitForExistence(timeout: 5), settings.debugDescription)
+        #endif
+        // Navigation only: never toggle accessibility or analytics settings in a test.
+        app.activate()
+    }
+
     func testTabsAndBundledIndicatorMetadata() {
         let app = XCUIApplication(); app.launch()
         XCTAssertTrue(app.tabBars.buttons["Scan"].exists)
@@ -11,11 +30,11 @@ final class ImportPickerTests: XCTestCase {
         for _ in 0..<6 where !license.isHittable { app.swipeUp() }
         license.tap()
         XCTAssertTrue(app.navigationBars["MVT License 1.1"].exists)
-        app.tabBars.buttons["Scan"].tap()
-        let size = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "1.49 MB")).firstMatch
+        app.tabBars.buttons["Indicators"].tap()
+        let size = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "2.33 MB")).firstMatch
         for _ in 0..<6 where !size.isHittable { app.swipeUp() }
         XCTAssertTrue(size.exists, app.debugDescription)
-        XCTAssertTrue(app.staticTexts["indicatorCount"].label.contains("1862"))
+        XCTAssertTrue(app.staticTexts["indicatorCount"].label.contains("2336"))
         let date = app.descendants(matching: .any).matching(NSPredicate(format: "label MATCHES %@", ".*[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}.*")).firstMatch
         XCTAssertTrue(date.exists, app.debugDescription)
     }
@@ -26,13 +45,12 @@ final class ImportPickerTests: XCTestCase {
         let archive = app.buttons["importArchive"]
         for _ in 0..<4 where !archive.isHittable { app.swipeUp() }
         XCTAssertTrue(archive.exists)
-        XCTAssertFalse(archive.isEnabled)
-        app.switches["consent"].switches.firstMatch.tap()
-        XCTAssertTrue(NSPredicate(format: "enabled == true").evaluate(with: archive))
+        XCTAssertTrue(archive.isEnabled)
         archive.tap()
         let cancel = app.buttons.matching(NSPredicate(format: "label IN %@", ["Cancel", "Cancelar"])).firstMatch
         XCTAssertTrue(cancel.waitForExistence(timeout: 10), app.debugDescription)
         cancel.tap()
+        app.tabBars.buttons["Indicators"].tap()
         let indicators = app.buttons["importIndicators"]
         for _ in 0..<4 where !indicators.isHittable { app.swipeUp() }
         indicators.tap()
@@ -44,5 +62,10 @@ final class ImportPickerTests: XCTestCase {
         app.buttons["collectionGuide"].tap()
         XCTAssertTrue(app.navigationBars["Collect diagnostics"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["These instructions work offline"].exists)
+        if #available(iOS 26.0, *) {
+            let shortcut = app.buttons["openAssistiveTouchSettings"]
+            for _ in 0..<5 where !shortcut.isHittable { app.swipeUp() }
+            XCTAssertTrue(shortcut.isHittable)
+        }
     }
 }

@@ -3,7 +3,7 @@
 Exported `report.json` uses ISO-8601 dates and these fields:
 
 - `schemaVersion`, `engineVersion`, `platform`, `caseID`, `createdAt`
-- `archiveSHA256`, `indicatorVersion`, `indicatorSHA256`, `consentConfirmedAt`
+- `archiveSHA256`, `indicatorVersion`, `indicatorSHA256`
 - `completed`, `findings`, `analyzed` (source archive paths), `skipped` (paths/reasons and unsupported indicators), `errors`
 - Each finding: `id`, `rule`, `value`, `source`, `record`, optional `timestamp`, `matchType` (`structured` or `raw-text`), `explanation`, `excerpt`.
 

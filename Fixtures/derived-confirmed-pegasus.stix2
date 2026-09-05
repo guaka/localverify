@@ -1,0 +1,16 @@
+{
+  "type": "bundle",
+  "id": "derived-confirmed-pegasus-fixture-1",
+  "objects": [
+    {
+      "type": "indicator",
+      "id": "derived-roleaccountd",
+      "pattern": "[process:name = 'roleaccountd']"
+    },
+    {
+      "type": "indicator",
+      "id": "derived-stagingd",
+      "pattern": "[process:name = 'stagingd']"
+    }
+  ]
+}

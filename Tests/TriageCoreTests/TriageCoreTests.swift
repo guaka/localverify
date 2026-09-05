@@ -41,7 +41,7 @@ final class TriageCoreTests: XCTestCase {
         XCTAssertTrue(Archive.safePath("sysdiagnose/logs/a.ips"))
     }
     func testHTMLAndIncompleteStatus() {
-        var report = Report(caseID: "<script>", indicators: .demo, consent: Date())
+        var report = Report(caseID: "<script>", indicators: .demo)
         XCTAssertEqual(report.status, "Analysis incomplete")
         XCTAssertTrue(Export.html(report).contains("&lt;script&gt;"))
         report.completed = true; report.errors = ["corrupt"]
@@ -61,7 +61,7 @@ final class TriageCoreTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: dir) }
         let archive = dir.appendingPathComponent("fixture.tar.gz")
         let digest = try Archive.hash(archive)
-        let initial = Report(caseID: "fixture", indicators: .demo, consent: Date())
+        let initial = Report(caseID: "fixture", indicators: .demo)
         let report = try Analyzer.analyze(archive: archive, indicators: .demo, previous: initial) { _ in }
         XCTAssertTrue(report.completed, report.errors.joined()); XCTAssertEqual(report.findings.count, 1)
         let resumed = try Analyzer.analyze(archive: archive, indicators: .demo, previous: report) { _ in }
@@ -76,7 +76,7 @@ final class TriageCoreTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: dir) }
         let archive = dir.appendingPathComponent("fixture.tar.gz")
         var bytes = try Data(contentsOf: archive); bytes.removeLast(12); try bytes.write(to: archive)
-        let report = try Analyzer.analyze(archive: archive, indicators: .demo, previous: Report(caseID: "bad", indicators: .demo, consent: Date())) { _ in }
+        let report = try Analyzer.analyze(archive: archive, indicators: .demo, previous: Report(caseID: "bad", indicators: .demo)) { _ in }
         XCTAssertFalse(report.completed); XCTAssertFalse(report.errors.isEmpty)
     }
     func testCancelledAnalysisDoesNotComplete() async throws {
@@ -84,7 +84,7 @@ final class TriageCoreTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: dir) }
         let task = Task {
             while !Task.isCancelled { await Task.yield() }
-            return try Analyzer.analyze(archive: dir.appendingPathComponent("fixture.tar.gz"), indicators: .demo, previous: Report(caseID: "cancel", indicators: .demo, consent: Date())) { _ in }
+            return try Analyzer.analyze(archive: dir.appendingPathComponent("fixture.tar.gz"), indicators: .demo, previous: Report(caseID: "cancel", indicators: .demo)) { _ in }
         }
         task.cancel()
         do { let report = try await task.value; XCTAssertFalse(report.completed) }
@@ -93,8 +93,17 @@ final class TriageCoreTests: XCTestCase {
     func testChangedEvidenceRejectedOnResume() throws {
         let dir = try fixture("test.log", text: "benign")
         defer { try? FileManager.default.removeItem(at: dir) }
-        var previous = Report(caseID: "changed", indicators: .demo, consent: Date()); previous.archiveSHA256 = "wrong"
+        var previous = Report(caseID: "changed", indicators: .demo); previous.archiveSHA256 = "wrong"
         XCTAssertThrowsError(try Analyzer.analyze(archive: dir.appendingPathComponent("fixture.tar.gz"), indicators: .demo, previous: previous) { _ in })
+    }
+    func testDerivedConfirmedCaseFixture() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let indicators = try IndicatorSet.parse(Data(contentsOf: root.appendingPathComponent("Fixtures/derived-confirmed-pegasus.stix2")))
+        let archive = root.appendingPathComponent("Fixtures/derived-confirmed-pegasus-sysdiagnose.tar.gz")
+        let report = try Analyzer.analyze(archive: archive, indicators: indicators, previous: Report(caseID: "derived-confirmed", indicators: indicators)) { _ in }
+        XCTAssertTrue(report.completed, report.errors.joined(separator: "; "))
+        XCTAssertEqual(report.findings.count, 2)
+        XCTAssertTrue(report.findings.allSatisfy { $0.matchType == "structured" })
     }
     func testRealSysdiagnoseWhenProvided() throws {
         guard let path = ProcessInfo.processInfo.environment["TRIAGE_REAL_SYSDIAGNOSE"], !path.isEmpty else {
@@ -102,7 +111,7 @@ final class TriageCoreTests: XCTestCase {
         }
         let archive = URL(fileURLWithPath: path)
         XCTAssertTrue(FileManager.default.fileExists(atPath: archive.path))
-        let report = try Analyzer.analyze(archive: archive, indicators: .demo, previous: Report(caseID: "real-sysdiagnose", indicators: .demo, consent: Date())) { _ in }
+        let report = try Analyzer.analyze(archive: archive, indicators: .demo, previous: Report(caseID: "real-sysdiagnose", indicators: .demo)) { _ in }
         XCTAssertTrue(report.completed, report.errors.joined(separator: "; "))
         XCTAssertFalse(report.analyzed.isEmpty)
         XCTAssertFalse(report.archiveSHA256.isEmpty)

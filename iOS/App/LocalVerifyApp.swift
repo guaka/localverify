@@ -33,7 +33,7 @@ struct LocalVerifyApp: App {
             try Self.protect(documents)
             try Self.protect(documents.appendingPathComponent("Imports", isDirectory: true))
             let cached = try? JSONDecoder().decode(IndicatorSet.self, from: Data(contentsOf: indicatorCache))
-            indicators = try cached ?? ThreatUpdates.bundled(in: .main)
+            indicators = try ThreatUpdates.preferredInstalledSet(cached: cached, bundled: ThreatUpdates.bundled(in: .main))
         } catch { message = error.localizedDescription }
     }
     private var indicatorCache: URL { root.deletingLastPathComponent().appendingPathComponent("active-indicators.json") }
@@ -55,7 +55,7 @@ struct LocalVerifyApp: App {
         }
     }
     func useBundledIndicators() {
-        do { try activateIndicators(ThreatUpdates.bundled(in: .main)); message = "Using bundled Amnesty indicators." }
+        do { try activateIndicators(ThreatUpdates.bundled(in: .main)); message = "Using bundled Amnesty and MVT indicators." }
         catch { message = error.localizedDescription }
     }
     nonisolated static func protect(_ url: URL) throws {
@@ -76,26 +76,38 @@ struct LocalVerifyApp: App {
         #endif
     }
     func importIndicators(_ url: URL) {
-        let access = url.startAccessingSecurityScopedResource(); defer { if access { url.stopAccessingSecurityScopedResource() } }
-        do {
+        guard !busy else { return }
+        busy = true; canCancel = false; progress = "Loading threat indicators…"
+        let worker = Task.detached(priority: .userInitiated) {
+            let access = url.startAccessingSecurityScopedResource(); defer { if access { url.stopAccessingSecurityScopedResource() } }
             let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
             guard size <= 5 * 1024 * 1024 else { throw TriageError.invalid("Indicator file exceeds 5 MiB") }
-            try activateIndicators(IndicatorSet.parse(Data(contentsOf: url)))
-            message = "Loaded \(indicators.indicators.count) indicators; \(indicators.unsupported.count) unsupported."
-        } catch { message = error.localizedDescription }
+            return try IndicatorSet.parse(Data(contentsOf: url))
+        }
+        job = Task {
+            do {
+                try activateIndicators(try await worker.value)
+                message = "Threat indicators loaded: \(indicators.indicators.count) supported; \(indicators.unsupported.count) unsupported."
+            } catch { message = "Could not load threat indicators. \(error.localizedDescription)" }
+            busy = false
+        }
     }
     func startImport(_ url: URL) {
-        guard !busy else { return }; busy = true; canCancel = true; progress = "Copying evidence…"
+        guard !busy else { return }; busy = true; canCancel = true; progress = "Preparing archive import…"
         let selected = indicators; let root = root
         let worker = Task.detached(priority: .userInitiated) {
                     let access = url.startAccessingSecurityScopedResource(); defer { if access { url.stopAccessingSecurityScopedResource() } }
+                    let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
                     let id = UUID().uuidString; let folder = root.appendingPathComponent(id)
                     try Self.protect(folder)
                     do {
                         let destination = folder.appendingPathComponent("original.tar.gz")
-                        try Archive.copy(url, to: destination)
+                        try Archive.copy(url, to: destination) { copied in
+                            let detail = size > 0 ? " \(Int((Double(copied) / Double(size) * 100).rounded()))%" : ""
+                            Task { @MainActor [weak self] in self?.progress = "Copying archive…\(detail)" }
+                        }
                         try FileManager.default.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: destination.path)
-                        var report = Report(caseID: id, indicators: selected, consent: Date())
+                        var report = Report(caseID: id, indicators: selected)
                         let indicatorURL = folder.appendingPathComponent("indicators.json")
                         try LocalStorage.write(JSONEncoder().encode(selected), to: indicatorURL)
                         report.indicatorSHA256 = try Archive.hash(indicatorURL)
@@ -160,6 +172,8 @@ struct ContentView: View {
                 .tabItem { Label("Scan", systemImage: "magnifyingglass") }
             CasesView(model: model)
                 .tabItem { Label("Cases", systemImage: "tray.full") }
+            IndicatorsView(model: model)
+                .tabItem { Label("Indicators", systemImage: "shield.lefthalf.filled") }
             AboutView()
                 .tabItem { Label("About", systemImage: "info.circle") }
         }
@@ -168,16 +182,7 @@ struct ContentView: View {
 
 struct ScanView: View {
     @ObservedObject var model: CaseStore
-    @State private var consent = false
     @State private var importing = false
-    private enum ImportKind { case archive, indicators }
-    @State private var importKind: ImportKind = .archive
-    private func timestamp(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM-dd HH:mm"
-        return formatter.string(from: date)
-    }
     var body: some View {
         NavigationStack {
             List {
@@ -195,44 +200,91 @@ struct ScanView: View {
                     }.accessibilityIdentifier("collectionGuide")
                     Text("Generate the archive in iOS, save it to On My iPhone → Local Verify → Imports, then import it below. No computer is needed.").font(.footnote)
                 }
-                Section("2 · Consent and import") {
+                Section("2 · Import") {
                     Text("Archives may contain sensitive personal data. Cases remain on this phone until deleted and are excluded from automatic backup. Exported copies are controlled by their recipient.").font(.footnote)
-                    Toggle("I confirm the data owner gave informed, uncoerced consent to this analysis and retention.", isOn: $consent).accessibilityIdentifier("consent")
-                    Button("Import sysdiagnose", systemImage: "square.and.arrow.down") { importKind = .archive; importing = true }.disabled(!consent || model.busy).accessibilityIdentifier("importArchive")
+                    Button("Import sysdiagnose", systemImage: "square.and.arrow.down") { importing = true }.disabled(model.busy).accessibilityIdentifier("importArchive")
                     ForEach(model.inbox, id: \.self) { url in
-                        Button(url.pathExtension == "partial" ? "Interrupted import — swipe to delete" : "Analyze shared archive \(url.lastPathComponent.prefix(8))") { model.startImport(url) }.disabled(!consent || model.busy || url.pathExtension == "partial")
+                        Button(url.pathExtension == "partial" ? "Interrupted import — swipe to delete" : "Analyze shared archive \(url.lastPathComponent.prefix(8))") { model.startImport(url) }.disabled(model.busy || url.pathExtension == "partial")
                             .swipeActions { Button("Delete", role: .destructive) { model.deleteInbox(url) }.disabled(model.busy) }
                     }
                 }
-                Section("Threat indicators") {
+                if !model.message.isEmpty { Section { Text(model.message).foregroundStyle(.orange) } }
+            }.navigationTitle("Scan")
+            .safeAreaInset(edge: .bottom) {
+                if model.busy {
+                    HStack(spacing: 12) {
+                        ProgressView()
+                        Text(model.progress).lineLimit(2)
+                        Spacer(minLength: 0)
+                        if model.canCancel { Button("Cancel") { model.cancel() } }
+                    }
+                    .padding(12)
+                    .background(.regularMaterial)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("importStatus")
+                }
+            }
+            .fileImporter(isPresented: $importing, allowedContentTypes: [.data]) { result in
+                do {
+                    let url = try result.get()
+                    model.startImport(url)
+                } catch { model.message = error.localizedDescription }
+            }
+        }
+    }
+}
+struct IndicatorsView: View {
+    @ObservedObject var model: CaseStore
+    @State private var importing = false
+    private func timestamp(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd HH:mm"
+        return formatter.string(from: date)
+    }
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Active threat indicators") {
                     Text(model.indicators.version).font(.caption)
                     Text("\(model.indicators.indicators.count) supported · \(model.indicators.unsupported.count) skipped").font(.subheadline).accessibilityIdentifier("indicatorCount")
                     LabeledContent("Definitions dated", value: model.indicators.latestIndicatorDate.map(timestamp) ?? "Not supplied")
                     if let size = model.indicators.byteCount { LabeledContent("Size", value: String(format: "%.2f MB", Double(size) / 1_000_000)) }
                     if let checked = model.indicators.checkedAt { LabeledContent("Last checked", value: timestamp(checked)) }
                     Text("Dates shown in device local time.").font(.caption).foregroundStyle(.secondary)
-                    Text("Includes selected historical Pegasus and Predator campaign indicators. Updates do not imply coverage of every current threat.").font(.footnote).foregroundStyle(.secondary)
+                    Text("Includes Pegasus, Predator, Coruna and DarkSword indicators, including research published in 2026. Newest definition date does not mean every campaign was updated then, or that every current threat is covered.").font(.footnote).foregroundStyle(.secondary)
+                }
+                Section("Manage indicators") {
                     Button("Update threat indicators", systemImage: "arrow.triangle.2.circlepath") { model.updateIndicators() }.disabled(model.busy || model.updatingIndicators).accessibilityIdentifier("updateIndicators")
                     if model.updatingIndicators { ProgressView("Downloading public definitions…") }
-                    Text("Downloads definitions from Amnesty's public GitHub repository. No diagnostics or findings are sent. GitHub sees normal connection metadata, such as your IP address.").font(.caption).foregroundStyle(.secondary)
-                    Button("Import threat indicators", systemImage: "doc.badge.plus") { importKind = .indicators; importing = true }.disabled(model.busy || model.updatingIndicators).accessibilityIdentifier("importIndicators")
+                    Text("Downloads definitions from Amnesty and MVT's public GitHub repositories. No diagnostics or findings are sent. GitHub sees normal connection metadata, such as your IP address.").font(.caption).foregroundStyle(.secondary)
+                    Button("Import threat indicators", systemImage: "doc.badge.plus") { importing = true }.disabled(model.busy || model.updatingIndicators).accessibilityIdentifier("importIndicators")
                     Text("Advanced: import a STIX2 JSON file supplied by an investigator.").font(.caption).foregroundStyle(.secondary)
                     Button("Use bundled indicators", systemImage: "shippingbox") { model.useBundledIndicators() }.disabled(model.busy || model.updatingIndicators)
-                    if !model.indicators.unsupported.isEmpty {
-                        DisclosureGroup("Unsupported definitions") { ForEach(model.indicators.unsupported, id: \.self) { Text($0).font(.caption) } }
-                    }
                 }
-                if model.busy { Section { ProgressView(model.progress); if model.canCancel { Button("Cancel") { model.cancel() } } } }
+                if !model.indicators.unsupported.isEmpty {
+                    Section { DisclosureGroup("Unsupported definitions") { ForEach(model.indicators.unsupported, id: \.self) { Text($0).font(.caption) } } }
+                }
                 if !model.message.isEmpty { Section { Text(model.message).foregroundStyle(.orange) } }
-            }.navigationTitle("Scan")
-            .fileImporter(isPresented: $importing, allowedContentTypes: [.data]) { result in
-                do {
-                    let url = try result.get()
-                    switch importKind {
-                    case .archive: model.startImport(url)
-                    case .indicators: model.importIndicators(url)
+            }
+            .navigationTitle("Indicators")
+            .safeAreaInset(edge: .bottom) {
+                if model.busy {
+                    HStack(spacing: 12) {
+                        ProgressView()
+                        Text(model.progress).lineLimit(2)
+                        Spacer(minLength: 0)
+                        if model.canCancel { Button("Cancel") { model.cancel() } }
                     }
-                } catch { model.message = error.localizedDescription }
+                    .padding(12)
+                    .background(.regularMaterial)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("importStatus")
+                }
+            }
+            .fileImporter(isPresented: $importing, allowedContentTypes: [.data]) { result in
+                do { model.importIndicators(try result.get()) }
+                catch { model.message = "Could not select threat indicators. \(error.localizedDescription)" }
             }
         }
     }
@@ -289,12 +341,14 @@ struct AboutView: View {
                 }
                 Section("Experimental coverage") {
                     Text("Findings are leads for review, not proof of compromise. No matches does not establish that a device is uncompromised.")
-                    Text("Bundled definitions cover selected historical Pegasus and Predator campaigns; unsupported indicator patterns are listed in Scan.").font(.footnote).foregroundStyle(.secondary)
+                    Text("Bundled definitions cover selected Pegasus, Predator, Coruna and DarkSword campaigns; unsupported indicator patterns are listed in Scan.").font(.footnote).foregroundStyle(.secondary)
                 }
                 Section("Indicator sources") {
                     Text("Amnesty International — Pegasus and Predator/Cytrox. Unmodified source bundles, licensed CC BY 2.0. The app uses only supported patterns.")
                     Link("Source and attribution", destination: URL(string: "https://github.com/AmnestyTech/investigations")!)
                     Link("CC BY 2.0 license", destination: URL(string: "https://creativecommons.org/licenses/by/2.0/")!)
+                    Text("MVT contributors — expanded Predator, Coruna and DarkSword collections, compiled from published research. MIT license; source references and license text accompany the bundled files.")
+                    Link("MVT indicator sources and license", destination: URL(string: "https://github.com/mvt-project/mvt-indicators")!)
                     Text("Optional updates download public definitions only. No diagnostic uploads or telemetry.").font(.footnote)
                 }
                 Section("Legal") {

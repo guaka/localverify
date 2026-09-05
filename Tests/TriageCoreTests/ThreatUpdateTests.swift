@@ -11,13 +11,18 @@ final class ThreatUpdateTests: XCTestCase {
     func testBundledFeedsHaveSupportedIndicatorsAndProvenance() throws {
         let set = try ThreatUpdates.combine(payloads, checkedAt: nil)
         XCTAssertGreaterThan(set.indicators.count, 100)
-        XCTAssertEqual(set.sources?.count, 2)
+        XCTAssertEqual(set.sources?.count, 5)
         XCTAssertNil(set.checkedAt)
         XCTAssertNotNil(set.latestIndicatorDate)
-        XCTAssertEqual(set.byteCount, 1_486_428)
+        XCTAssertEqual(set.byteCount, 2_331_191)
+        XCTAssertGreaterThan(set.latestIndicatorDate ?? .distantPast, ISO8601DateFormatter().date(from: "2026-03-01T00:00:00Z")!)
+        XCTAssertEqual(Set(set.indicators.map { $0.kind + ":" + $0.value }).count, set.indicators.count)
+        for data in try payloads {
+            XCTAssertFalse(try IndicatorSet.parse(data).indicators.isEmpty)
+        }
         XCTAssertFalse(set.indicators.contains { $0.value == "triage-test.invalid" })
         print("Bundled indicators: \(set.indicators.count) supported, \(set.unsupported.count) skipped")
-        let report = Report(caseID: "snapshot", indicators: set, consent: Date())
+        let report = Report(caseID: "snapshot", indicators: set)
         XCTAssertEqual(report.indicatorSources, set.sources)
     }
     func testLiveDownloadWhenRequested() async throws {
@@ -28,13 +33,37 @@ final class ThreatUpdateTests: XCTestCase {
         XCTAssertNotNil(set.latestIndicatorDate)
         XCTAssertGreaterThan(set.byteCount ?? 0, 0)
     }
+    func test2026CollectionsProduceTraceableLeadsWithoutDomainSubstringMatches() throws {
+        for data in try payloads.suffix(2) {
+            let set = try IndicatorSet.parse(data)
+            let indicator = try XCTUnwrap(set.indicators.first { $0.kind == "domain-name:value" })
+            let findings = try Analyzer.scan("Connected to \(indicator.value)", source: "seeded-2026.log", indicators: set.indicators)
+            XCTAssertTrue(findings.contains { $0.rule == indicator.id && $0.source == "seeded-2026.log" && $0.value == indicator.value })
+            let benign = try Analyzer.scan("Connected to \(indicator.value).benign.invalid", source: "benign.log", indicators: [indicator])
+            XCTAssertTrue(benign.isEmpty)
+        }
+    }
     func testInvalidOrIncompleteUpdatesRejected() throws {
         let valid = try payloads
         XCTAssertThrowsError(try ThreatUpdates.combine([valid[0]], checkedAt: Date()))
-        XCTAssertThrowsError(try ThreatUpdates.combine([valid[0], Data("bad".utf8)], checkedAt: Date()))
+        var malformed = valid; malformed[1] = Data("bad".utf8)
+        XCTAssertThrowsError(try ThreatUpdates.combine(malformed, checkedAt: Date()))
         let empty = Data(#"{"type":"bundle","objects":[]}"#.utf8)
-        XCTAssertThrowsError(try ThreatUpdates.combine([valid[0], empty], checkedAt: Date()))
-        XCTAssertThrowsError(try ThreatUpdates.combine([Data(repeating: 0, count: ThreatUpdates.maximumBytes + 1), valid[1]], checkedAt: nil))
+        malformed[1] = empty
+        XCTAssertThrowsError(try ThreatUpdates.combine(malformed, checkedAt: Date()))
+        malformed = valid; malformed[0] = Data(repeating: 0, count: ThreatUpdates.maximumBytes + 1)
+        XCTAssertThrowsError(try ThreatUpdates.combine(malformed, checkedAt: nil))
+    }
+    func testNewerBundleUpgradesPublisherCacheButPreservesManualImports() throws {
+        let current = try ThreatUpdates.combine(payloads, checkedAt: Date())
+        var old = current
+        old.version = "old"
+        old.sources = Array(current.sources!.prefix(2))
+        old.latestIndicatorDate = Date(timeIntervalSince1970: 0)
+        XCTAssertEqual(ThreatUpdates.preferredInstalledSet(cached: old, bundled: current).version, current.version)
+        old.sources = nil
+        XCTAssertEqual(ThreatUpdates.preferredInstalledSet(cached: old, bundled: current).version, "old")
+        XCTAssertEqual(ThreatUpdates.preferredInstalledSet(cached: current, bundled: old).version, current.version)
     }
     func testUpdateTimestampAndStableFingerprint() throws {
         let data = try payloads

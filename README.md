@@ -4,7 +4,7 @@
 
 Swift/SwiftUI iOS 17+ application and import-only share extension. Processing is local; no backend or telemetry. Android remains a documented second phase in [docs/ANDROID.md](docs/ANDROID.md).
 
-**Experimental:** this is a focused diagnostics parser, not full MVT parity. The app bundles 1.49 MB of Amnesty Pegasus and Predator/Cytrox indicators for offline use. It supports 1,862 definitions in the current snapshot and explicitly skips 30 unsupported definitions. Historical indicators do not provide comprehensive current-spyware coverage. Device installation and synthetic tests are documented separately from real-world detection validation.
+**Experimental:** this is a focused diagnostics parser, not full MVT parity. The app bundles 2.33 MB of Amnesty/MVT Pegasus, Predator, Coruna and DarkSword indicators for offline use, including March 2026 iOS research. It supports 2,336 unique definitions in the current snapshot and explicitly skips 55 unsupported definitions. Selected indicators do not provide comprehensive current-spyware coverage. Device installation and synthetic tests are documented separately from real-world detection validation.
 
 ## Build
 
@@ -34,7 +34,9 @@ The home screen includes an offline **How to collect and export sysdiagnose** gu
 
 UI regression checks can be generated with `python3 tools/generate_project.py --local-only --ui-tests` and run using the `LocalVerifyChecks` scheme on an iPhone simulator.
 
-Confirm data-owner consent, follow the collection guide, and import a sysdiagnose archive. Imported cases freeze their indicator set so resumed analysis remains reproducible. Results distinguish structured matches from contextual raw-text matches; every lead points to a file and record. Share a report ZIP manually, optionally with original evidence. Delete cases in their detail screen.
+The collection guide offers Apple's supported AssistiveTouch Settings shortcut on iOS 26+, with manual directions on older versions or if opening fails. It explains the optional Analytics custom action without enabling settings automatically. Analytics Data has no documented public deep link; its exact Settings path remains visible. No undocumented `App-prefs` links are used, and Apple analytics sharing is not requested. API reference: [AccessibilitySettings.openSettings](https://developer.apple.com/documentation/accessibility/accessibilitysettings/opensettings(for:)).
+
+Follow the collection guide and import a sysdiagnose archive. Imported cases freeze their indicator set so resumed analysis remains reproducible. Results distinguish structured matches from contextual raw-text matches; every lead points to a file and record. Share a report ZIP manually, optionally with original evidence. Delete cases in their detail screen.
 
 Cases are protected and excluded from cloud backup. Exports stored in a case are deleted with it; copies already shared elsewhere are not. Shared inbox archives are retained until analyzed or deleted. Analysis resumes completed files, re-reading the archive from its beginning; background execution is not guaranteed.
 

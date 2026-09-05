@@ -10,24 +10,41 @@ public struct ThreatFeed {
 public enum ThreatUpdates {
     public static let feeds = [
         ThreatFeed(name: "Amnesty International — Pegasus", resource: "pegasus", url: URL(string: "https://raw.githubusercontent.com/AmnestyTech/investigations/master/2021-07-18_nso/pegasus.stix2")!),
-        ThreatFeed(name: "Amnesty International — Predator/Cytrox", resource: "cytrox", url: URL(string: "https://raw.githubusercontent.com/AmnestyTech/investigations/master/2021-12-16_cytrox/cytrox.stix2")!)
+        ThreatFeed(name: "Amnesty International — Predator/Cytrox", resource: "cytrox", url: URL(string: "https://raw.githubusercontent.com/AmnestyTech/investigations/master/2021-12-16_cytrox/cytrox.stix2")!),
+        ThreatFeed(name: "MVT — Predator", resource: "predator", url: URL(string: "https://raw.githubusercontent.com/mvt-project/mvt-indicators/main/intellexa_predator/predator.stix2")!),
+        ThreatFeed(name: "MVT — Coruna / CryptoWaters", resource: "coruna", url: URL(string: "https://raw.githubusercontent.com/mvt-project/mvt-indicators/main/2026-03-03_coruna_cryptowaters/coruna.stix2")!),
+        ThreatFeed(name: "MVT — DarkSword", resource: "darksword", url: URL(string: "https://raw.githubusercontent.com/mvt-project/mvt-indicators/main/2026-03-30_darksword/darksword.stix2")!)
     ]
     public static let maximumBytes = 5 * 1024 * 1024
+
+    /// Upgrade our cached publisher sets when a newer app includes newer definitions.
+    /// Investigator-imported sets have no feed URLs and must never be replaced automatically.
+    public static func preferredInstalledSet(cached: IndicatorSet?, bundled: IndicatorSet) -> IndicatorSet {
+        guard let cached else { return bundled }
+        let known = Set(feeds.map { $0.url.absoluteString })
+        if let sources = cached.sources, !sources.isEmpty, Set(sources).isSubset(of: known),
+           let newDate = bundled.latestIndicatorDate,
+           newDate > (cached.latestIndicatorDate ?? .distantPast) {
+            return bundled
+        }
+        return cached
+    }
 
     public static func combine(_ payloads: [Data], checkedAt: Date?) throws -> IndicatorSet {
         guard payloads.count == feeds.count else { throw TriageError.invalid("Incomplete indicator update") }
         var hash = SHA256(); var indicators: [Indicator] = []; var unsupported: [String] = []; var dates: [Date] = []
+        var seen = Set<String>()
         for (index, data) in payloads.enumerated() {
             guard data.count <= maximumBytes else { throw TriageError.invalid("Indicator download exceeds 5 MiB") }
             let parsed = try IndicatorSet.parse(data)
             guard !parsed.indicators.isEmpty else { throw TriageError.invalid("\(feeds[index].name) contains no supported indicators") }
             hash.update(data: data)
-            indicators += parsed.indicators
+            indicators += parsed.indicators.filter { seen.insert($0.kind + "\u{0}" + $0.value).inserted }
             if let date = parsed.latestIndicatorDate { dates.append(date) }
             unsupported += parsed.unsupported.map { feeds[index].name + ": " + $0 }
         }
         let digest = hash.finalize().map { String(format: "%02x", $0) }.joined()
-        var set = IndicatorSet(version: "Amnesty Pegasus + Predator · \(digest.prefix(12))", indicators: indicators, unsupported: unsupported)
+        var set = IndicatorSet(version: "Pegasus · Predator · Coruna · DarkSword · \(digest.prefix(12))", indicators: indicators, unsupported: unsupported)
         set.sources = feeds.map { $0.url.absoluteString }
         set.checkedAt = checkedAt
         set.latestIndicatorDate = dates.max()

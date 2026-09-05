@@ -15,6 +15,12 @@ The practical alternative is a layered corpus:
 
 Synthetic fixtures should be labelled as synthetic and must never be reported as evidence of a real compromise.
 
+This repository includes `Fixtures/derived-confirmed-pegasus-sysdiagnose.tar.gz`
+and its companion fixture-only STIX2 file. They are minimal, synthetic
+reconstructions of two public Amnesty forensic timeline entries, and exist only
+to test structured matching. See `Fixtures/DERIVED_CONFIRMED_CASE.md`; do not
+substitute this fixture for a real acquisition or production threat intelligence.
+
 ## iPhone and iPad sources
 
 | Source | What it provides | Appropriate use |

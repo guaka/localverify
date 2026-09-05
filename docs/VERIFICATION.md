@@ -25,6 +25,14 @@ The local SAF iOS 15 sample used during initial verification was obtained from [
 - Publisher snapshot check confirmed revision `3d8f248a0d015f183724ae7d096a5c46a8bb5fc7`. Bundled definitions total 1,486,428 bytes, with 1,862 supported and 30 explicitly skipped indicators. These checks establish parsing and update behavior, not detection effectiveness.
 - This bundled-indicator/tab update was signed with Trustroots Foundation, reinstalled on `ip2`, and successfully launched. This remains the Files-only build; physical-device airplane-mode analysis/export validation is still a separate release gate.
 
+### Newer definitions and Settings shortcut — 2026-09-05
+
+- Added pinned MVT Predator, Coruna and DarkSword collections from revision `b22ddf05e1a31e7732b8895676987c5c3482ef65`, preserving the existing Amnesty bundles. Total: 2,331,191 bytes, 2,336 unique supported indicators, 55 skipped. Newest STIX indicator date: 2026-03-30 00:00 UTC. Publisher timestamps are not replaced with download dates.
+- 18 core tests run, zero failures, one optional real-archive test skipped. Includes traceable seeded matches from both 2026 collections, benign domain-suffix checks, all-or-nothing five-feed live download, de-duplication and cache upgrade while preserving manual imports. This is behavior validation, not confirmed-positive detection validation.
+- Collection-guide and Settings-navigation simulator tests pass. The simulator omits AssistiveTouch and lands on the Accessibility root; the test explicitly checks this fallback. The app uses Apple's public iOS 26+ AssistiveTouch API, retains manual instructions, and does not toggle any settings. Exact physical-device destination still needs a user check. Analytics Data has no documented public deep link.
+
+### Remaining release gate
+
 Before investigator deployment, complete and record:
 
 - Physical iPhone import through Files and share extension, airplane-mode analysis/export.

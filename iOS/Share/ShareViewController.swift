@@ -43,7 +43,7 @@ final class ShareViewController: UIViewController {
                 }
                 try output.close()
                 try FileManager.default.moveItem(at: partial, to: target)
-                DispatchQueue.main.async { self?.label.text = "Saved. Open Local Verify to confirm consent and analyze." }
+                DispatchQueue.main.async { self?.label.text = "Saved. Open Local Verify to analyze." }
             } catch { DispatchQueue.main.async { self?.saving = false; self?.label.text = "Import failed: \(error.localizedDescription)" } }
         }
     }

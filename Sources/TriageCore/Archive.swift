@@ -3,7 +3,7 @@ import CryptoKit
 import CZlib
 
 public enum Archive {
-    public static func copy(_ source: URL, to destination: URL) throws {
+    public static func copy(_ source: URL, to destination: URL, progress: ((Int) -> Void)? = nil) throws {
         let input = try FileHandle(forReadingFrom: source); defer { try? input.close() }
         try LocalStorage.createFile(destination)
         let output = try FileHandle(forWritingTo: destination); defer { try? output.close() }
@@ -12,6 +12,7 @@ public enum Archive {
             try Task.checkCancellation(); size += data.count
             guard size <= 8 * 1024 * 1024 * 1024 else { throw TriageError.invalid("Compressed archive exceeds 8 GiB import limit") }
             try output.write(contentsOf: data)
+            progress?(size)
         }
     }
     public static func hash(_ url: URL) throws -> String {

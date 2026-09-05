@@ -66,7 +66,8 @@ public struct Report: Codable {
     public var indicatorSHA256 = ""
     public var indicatorSources: [String]? = nil
     public var indicatorsCheckedAt: Date? = nil
-    public var consentConfirmedAt: Date
+    // Retained as optional legacy metadata so existing saved cases can still be opened.
+    public var consentConfirmedAt: Date? = nil
     public var completed = false
     public var findings: [Finding] = []
     public var analyzed: [String] = []
@@ -76,8 +77,8 @@ public struct Report: Codable {
         if !completed || !errors.isEmpty { return "Analysis incomplete" }
         return findings.isEmpty ? "No matches in analyzed evidence" : "Leads requiring review"
     }
-    public init(caseID: String, indicators: IndicatorSet, consent: Date) {
-        self.caseID = caseID; indicatorVersion = indicators.version; consentConfirmedAt = consent
+    public init(caseID: String, indicators: IndicatorSet) {
+        self.caseID = caseID; indicatorVersion = indicators.version
         skipped = indicators.unsupported
         indicatorSources = indicators.sources
         indicatorsCheckedAt = indicators.checkedAt

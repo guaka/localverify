@@ -1,6 +1,6 @@
 # Local data handling
 
-The app contains no upload client, remote analysis service, analytics SDK, telemetry, or background indicator download. Analysis reads only user-imported files and local indicator data. Update threat indicators downloads two fixed public Amnesty bundles from raw.githubusercontent.com only when tapped. GET requests contain no evidence, findings, cookies, or account credentials. Redirects are rejected. GitHub sees connection metadata such as IP address. Analysis works offline with bundled or cached definitions. Source/license/help links open a browser only when tapped and pass no evidence.
+The app contains no upload client, remote analysis service, analytics SDK, telemetry, or background indicator download. Analysis reads only user-imported files and local indicator data. Update threat indicators downloads five fixed public Amnesty/MVT bundles from raw.githubusercontent.com only when tapped. GET requests contain no evidence, findings, cookies, or account credentials. Redirects are rejected. GitHub sees connection metadata such as IP address. Analysis works offline with bundled or cached definitions. Source/license/help links open a browser only when tapped and pass no evidence.
 
 App-owned cases, originals, indicator snapshots, checkpoints, and exports are excluded from automatic backup. iOS files use complete file protection. Share-extension inbox files are protected and their directory excluded from backup; interrupted copies are listed for explicit deletion.
 
