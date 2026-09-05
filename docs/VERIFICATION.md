@@ -2,6 +2,14 @@
 
 Automated core tests cover equality/unsupported STIX patterns, structured versus raw matches, text boundaries, path safety, HTML escaping, archive analysis and resume, unchanged original hashes, ZIP integrity, and truncated archives. Fixtures are synthetic and establish software behavior only.
 
+An optional real-archive smoke test is available for a locally stored, authorized sysdiagnose archive. It is skipped by default so the repository neither distributes nor requires device evidence:
+
+```
+TRIAGE_REAL_SYSDIAGNOSE=/absolute/path/to/sysdiagnose.tar.gz swift test --filter TriageCoreTests/testRealSysdiagnoseWhenProvided
+```
+
+The local SAF iOS 15 sample used during initial verification was obtained from [EC-DIGIT's sysdiagnose test-data repository](https://github.com/EC-DIGIT-CSIRC/sysdiagnose-testdata), verified against its Git LFS SHA-256 `4491d5e4b6f4349311df3b3fc671f1dd040c8ccda9f97e3a0debef151e613114`, and kept under ignored `TestData/`. Download it with `tools/download_saf_sysdiagnose.sh`.
+
 ## Recorded checks — 2026-09-05
 
 - Native iOS app and share extension compile with Xcode 26.6 for the iOS simulator.

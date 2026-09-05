@@ -96,4 +96,15 @@ final class TriageCoreTests: XCTestCase {
         var previous = Report(caseID: "changed", indicators: .demo, consent: Date()); previous.archiveSHA256 = "wrong"
         XCTAssertThrowsError(try Analyzer.analyze(archive: dir.appendingPathComponent("fixture.tar.gz"), indicators: .demo, previous: previous) { _ in })
     }
+    func testRealSysdiagnoseWhenProvided() throws {
+        guard let path = ProcessInfo.processInfo.environment["TRIAGE_REAL_SYSDIAGNOSE"], !path.isEmpty else {
+            throw XCTSkip("Set TRIAGE_REAL_SYSDIAGNOSE to run the optional real-archive smoke test")
+        }
+        let archive = URL(fileURLWithPath: path)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: archive.path))
+        let report = try Analyzer.analyze(archive: archive, indicators: .demo, previous: Report(caseID: "real-sysdiagnose", indicators: .demo, consent: Date())) { _ in }
+        XCTAssertTrue(report.completed, report.errors.joined(separator: "; "))
+        XCTAssertFalse(report.analyzed.isEmpty)
+        XCTAssertFalse(report.archiveSHA256.isEmpty)
+    }
 }
