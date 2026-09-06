@@ -290,9 +290,8 @@ class MainActivity : ComponentActivity() {
         }
 
         if (report.consentConfirmedAt == null) {
-            writeReportSnapshot { checkpoint ->
-                checkpoint.consentConfirmedAt = System.currentTimeMillis()
-            }
+            report.consentConfirmedAt = System.currentTimeMillis()
+            store.writeReport(caseId, report)
         }
 
         isRunning = true

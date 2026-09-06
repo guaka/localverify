@@ -88,7 +88,7 @@ The Android module exists at `Android/` and currently includes:
 
 - Manufacturer and collection-path guidance is present but not yet validated for real devices.
 - Shared evidence parsing parity against upstream Android-MVT checks is not yet fully validated.
-- Picker and share/view intake is implemented for supported stream/file types and common archive MIME types, but on-device validation is still pending.
+- Synthetic ZIP intake via explicit share/view intents passed on an Android 16/API 36 emulator. Document-picker navigation, implicit intent resolution, other formats, and physical-device validation remain pending.
 - Android `ACTION_VIEW` intent handling is configured with `DEFAULT` + `BROWSABLE` and needs device-path coverage.
 - Signed APK/release packaging pipeline not completed (release Gradle signing hook is now documented).
 - Keystore-based release signing is optional via env vars in `Android/app/build.gradle.kts`; unsigned release builds still allowed for local CI parity checks.
@@ -152,12 +152,16 @@ Legend: `✅` implemented, `🟠` implemented but not validated on physical devi
 - Eight JVM tests passed across five suites, with zero failures, errors, or skips. `MatchingParityTest` exercises nine synthetic fixture rows.
 - Suites: `ArchivePolicyTest` (2), `ArchiveWalkerTest` (3), `IndicatorParserParityTest` (1), `MatchingParityTest` (1), `TriageAnalyzerTest` (1).
 - Debug-signed APK: `Android/app/build/outputs/apk/debug/localverify-debug.apk`; the filename is configured for subsequent debug builds.
-- APK SHA-256: `399796c71176c7d50eb350d27654e0b23b6e7b98aa3003fed81ca5a49b0de235`.
+- Latest APK SHA-256: `bd39b85e807c8e24576d1db8716b4ab6ffe52258220d02c54d6a90664f50e3b6` (rebuilt after the consent-persistence fix).
 - Test report: `Android/app/build/reports/tests/testDebugUnitTest/index.html`; XML results: `Android/app/build/test-results/testDebugUnitTest/`.
 - Build fixes include the Material Components XML theme dependency, Compose compiler 1.5.14 alignment with Kotlin 1.9.24, and nullable-value/activity callback corrections.
 - Test-run fixes include explicit Gson fixture typing, archive output stream selection, a nullable sources assertion, and a test-only Android-compatible JSON implementation (`com.vaadin.external.google:android-json:0.0.20131108.vaadin1`).
 - Matching now recognizes `process_name`, and structured records without timestamps are handled safely. The STIX test includes a separate unsupported `software:name` fixture in addition to the escaped registry pattern.
-- This validates the checked-in synthetic JVM suite, not full upstream Android-MVT parity or on-device behavior. Device checks and release signing remain pending.
+- Follow-up: two `SyntheticWorkflowTest` instrumentation tests passed on `Trustroots_Pixel_8_API_36` (Android 16/API 36), together with all eight JVM tests and debug assembly.
+- Emulator coverage: explicit `ACTION_VIEW`/`ACTION_SEND` ZIP intake via content URI, consent gate, persisted consent timestamp, structured match, skipped binary entry, completed-case activity recreation, and ZIP export with/without original bytes.
+- The tests caught and fixed consent loss: `startAnalysis` now stamps the same report object passed to the analyzer instead of writing a separate snapshot that checkpoints overwrite.
+- Instrumentation report: `Android/app/build/reports/androidTests/connected/debug/index.html`. Synthetic inputs and export assertions run inside the emulator; no phone evidence was used or transferred.
+- This does not establish full upstream Android-MVT parity, interrupted-run recovery, document-picker navigation, rotation/background behavior, or physical-device readiness. Release signing remains pending.
 
 ### Current environment note
 
@@ -173,7 +177,16 @@ export PATH="$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$PATH"
 ./scripts/run-android-plan.sh
 ```
 
-The original successful run invoked cached Gradle by absolute path. The repository now includes `gradlew`, `gradlew.bat`, and the wrapper JAR/properties under `Android/gradle/wrapper/`. Gradle 8.11.1 is pinned with its published distribution SHA-256 (`f397b287023acdba1e9f6fc5ea72d22dd63669d59ed4a289a29b1a76eee151c6`). The full plan runner and helper-script preflight passed with the wrapper and no standalone Gradle on PATH. ADB 1.0.41 (37.0.0-14910828) was detected; device availability remains unverified.
+The original successful run invoked cached Gradle by absolute path. The repository now includes `gradlew`, `gradlew.bat`, and the wrapper JAR/properties under `Android/gradle/wrapper/`. Gradle 8.11.1 is pinned with its published distribution SHA-256 (`f397b287023acdba1e9f6fc5ea72d22dd63669d59ed4a289a29b1a76eee151c6`). The full plan runner and helper-script preflight passed with the wrapper and no standalone Gradle on PATH. ADB 1.0.41 (37.0.0-14910828) was used for API 36 emulator testing. No physical device was connected. The API 35 AVD could not start because its system image was missing; the API 36 AVD ran read-only and was stopped after testing.
+
+Run instrumentation only on a disposable emulator without existing Local Verify cases. The tests refuse to run against existing cases and generate their fixtures locally:
+
+```sh
+export ANDROID_SERIAL=emulator-5554
+./gradlew :app:connectedDebugAndroidTest :app:testDebugUnitTest :app:assembleDebug --console=plain
+```
+
+Use the emulator serial shown by `adb devices`; select only the intended test emulator.
 
 `./scripts/check-android-env.sh` is strict for required dependencies and will fail fast when:
 - `gradlew` is absent and no usable local `gradle` binary is on PATH,
@@ -230,7 +243,7 @@ Steps:
 
 ## Next build-phase tasks
 
-1. Install `localverify-debug.apk` on an Android 11+ emulator or authorized device and execute intake, cancellation/resume, rotation/background, and export checks using synthetic fixtures. Wrapper generation, preflight, and the full build/test plan runner are complete.
+1. Expand emulator validation to document-picker navigation, implicit share/open resolution, unsupported input, cancellation/resume, rotation/background, and export failures. Explicit ZIP intent intake, consent, completed-case recreation, and both export modes now pass; physical-device/OEM checks remain pending.
 2. Complete upstream parity and OEM guidance validation, then build/sign a release APK and record its hash and validation evidence.
 
 Keep actual device evidence on the phone. Do not copy diagnostic archives, extracted contents, evidence containers, or case exports to the Mac for debugging without explicit permission. Use synthetic fixtures and non-content timing/progress information.

@@ -24,7 +24,8 @@ Keep one entry per device and test set:
 - SDK: `/Users/k/Library/Android/sdk`, Platform 34 and Build Tools 34.0.0.
 - Eight tests passed across five suites; zero failures, errors, or skips. Matching coverage includes nine synthetic fixture rows.
 - APK: `Android/app/build/outputs/apk/debug/localverify-debug.apk` (debug-signed; permanent debug output filename).
-- SHA-256: `399796c71176c7d50eb350d27654e0b23b6e7b98aa3003fed81ca5a49b0de235`.
+- Latest APK SHA-256: `bd39b85e807c8e24576d1db8716b4ab6ffe52258220d02c54d6a90664f50e3b6` (consent-persistence fix included).
+- Emulator follow-up: two instrumentation tests passed on Android 16/API 36, alongside all eight JVM tests and debug assembly.
 - The successful cached-Gradle builds are confirmed by a new test/build execution. Default-PATH preflight failures are a separate environment-discovery issue, not evidence that builds never ran.
 
 ### Execution log entries
@@ -39,10 +40,23 @@ Keep one entry per device and test set:
 - HTML report: `Android/app/build/reports/tests/testDebugUnitTest/index.html`.
 - XML reports: `Android/app/build/test-results/testDebugUnitTest/TEST-*.xml`.
 - APK hash above was recorded using `openssl dgst -sha256`; the sandbox blocked the Perl runtime used by `shasum`.
-- Device validation and signed release packaging: not performed.
+- Device validation and signed release packaging were not performed during the initial JVM-only run; see the emulator follow-up below.
 - Follow-up tooling run on 2026-09-06: generated the Gradle 8.11.1 wrapper with the published distribution checksum, then ran `./scripts/run-android-plan.sh` successfully with no standalone Gradle on PATH. Preflight verified the wrapper, Java/javac 21.0.4, SDK path, and ADB 1.0.41 (37.0.0-14910828). Debug assembly and unit-test tasks were up-to-date from the passing run; this was a wrapper/workflow validation, not a new test execution.
 
 ---
+
+### Emulator execution (2026-09-06)
+
+- AVD: `Trustroots_Pixel_8_API_36`, Android 16/API 36, arm64; serial `emulator-5554`. Started read-only/headless and stopped after the run. No physical device was connected.
+- API 35 AVD was unavailable due to a missing system image; API 35 is not validated.
+- Command: `ANDROID_SERIAL=emulator-5554 ./gradlew :app:connectedDebugAndroidTest :app:testDebugUnitTest :app:assembleDebug --console=plain` with the documented Java/SDK environment.
+- Tests: `SyntheticWorkflowTest.viewImportConsentAnalysisRecreateAndExportWithOriginal` and `SyntheticWorkflowTest.shareImportAnalysisAndReportOnlyExport`.
+- First run: both tests failed because the analysis checkpoint overwrote the saved consent timestamp. Fixed by updating the same report instance passed into analysis.
+- Final result: two instrumentation tests passed, zero failures/errors/skips, plus eight passing JVM tests; debug APK rebuilt successfully.
+- Synthetic fixture: locally generated ZIP with a matching hostname JSON record and a skipped binary entry. Tested content URI intake, consent gate/persistence, structured finding, two analyzed paths, completed-case recreation, and export ZIP contents with/without original bytes.
+- Report: `Android/app/build/reports/androidTests/connected/debug/index.html`; XML: `Android/app/build/outputs/androidTest-results/connected/debug/`.
+- Tests inspect exports in the emulator and remove their generated cases/fixtures. No actual diagnostic evidence was used or transferred.
+- Limits: explicit intents target the activity; this does not verify document-picker or file-manager UI, implicit intent resolution, interrupted analysis, rotation/background, OEM guidance, or physical hardware.
 
 - [x] Archive walker unit test coverage added:
   - `Android/app/src/test/kotlin/org/mobiletriage/localverify/ArchiveWalkerTest.kt`
@@ -72,7 +86,8 @@ Keep one entry per device and test set:
 - [x] Android plan runner helper added:
   - `Android/scripts/run-android-plan.sh`
   - Current behavior: `run-android-plan.sh` runs `bootstrap-gradle.sh` first, then `check-android-env.sh`.
-- [ ] End-to-end Android device validation not yet executed in this workspace.
+- [x] Synthetic explicit-intent analysis/export workflow validated on API 36 emulator.
+- [ ] Full physical-device and lifecycle validation completed.
 
 ## Environment and reproducibility notes
 
@@ -80,7 +95,7 @@ Keep one entry per device and test set:
 - Repository-local Gradle 8.11.1 wrapper generated with distribution checksum `f397b287023acdba1e9f6fc5ea72d22dd63669d59ed4a289a29b1a76eee151c6`; includes Unix/Windows launchers, JAR, and properties.
 - Preflight and full plan runner passed with the configured environment and no standalone Gradle on PATH; unit tests and APK assembly are verified.
 - SDK/cache access restrictions required additional access for the successful runs. Do not describe a permission or PATH failure as proof that the installed tools are absent.
-- ADB version lookup passed in preflight; connected-device availability and runtime validation remain pending.
+- ADB connected to the API 36 emulator and instrumentation passed; physical-device validation remains pending.
 
 `./scripts/check-android-env.sh` enforces required tooling for local build/test:
 - fails when both `gradlew` and local `gradle` are missing,
@@ -95,7 +110,7 @@ Keep one entry per device and test set:
 - [x] `Android/` directory contains a usable Gradle runner (`./scripts/gradle-android.sh` delegates to pinned `./gradlew`)
 - [x] `Android/scripts/bootstrap-gradle.sh` and `Android/scripts/gradle-android.sh` are available and point to same execution path.
 - [x] JDK 17+ active for Android build tasks (Android Studio OpenJDK 21.0.4)
-- [ ] Android device available for integration checks (when running device validation)
+- [x] API 36 emulator available and used for integration checks; no physical device connected
 - [x] `./scripts/check-android-env.sh` baseline checks pass (`gradle >= 8.7`, `java/javac >= 17`, `gradlew` status; `adb` optional for now)
 - [x] `./scripts/run-android-plan.sh` executed successfully on branch
 
@@ -104,6 +119,7 @@ Keep one entry per device and test set:
 - [ ] Import via document picker with `.zip`/`.tar.gz`
 - [ ] Import via `Share` (`ACTION_SEND`) flow
 - [ ] Import via direct open (`ACTION_VIEW`) from file manager
+- [x] Explicit `ACTION_SEND` and `ACTION_VIEW` ZIP/content-URI intake into the activity (API 36 emulator)
 - [ ] Rejected unsupported formats show explicit status/toast
 - [ ] Manufacturer note visibility checks
 
@@ -129,9 +145,10 @@ Keep one entry per device and test set:
 - [ ] Cancel request interrupts and persists checkpoint
 - [ ] Resume from interrupted checkpoint continues from last analyzed entry
 - [ ] Rotation/background does not crash; state remains recoverable
-- [ ] `consentConfirmedAt` is populated on first analysis start
-- [ ] Export ZIP includes `report.json` and `report.html`
-- [ ] Optional original archive inclusion toggles correctly
+- [x] `consentConfirmedAt` is populated on first analysis start and survives checkpointing (API 36 emulator)
+- [x] Completed-case activity recreation preserves findings and consent timestamp (not an interrupted-run or rotation test)
+- [x] Export ZIP includes `report.json` and `report.html` (API 36 emulator)
+- [x] Optional original archive inclusion toggles correctly; included bytes equal synthetic input (API 36 emulator)
 
 ### 4) Release packaging
 
@@ -156,5 +173,5 @@ Keep one entry per device and test set:
 
 ## Next execution order
 
-1. Install the debug APK on an emulator or authorized device and complete tracks 1 and 3 with synthetic fixtures. Pinned wrapper, preflight, and plan runner validation are complete.
+1. Complete the remaining intake/lifecycle checks: picker UI, implicit intents, other formats, cancellation/resume, rotation/background, and export failures. Two API 36 synthetic workflow tests now pass; physical-device checks remain pending.
 2. Complete upstream/OEM validation and release signing, then record the release artifact hash for handoff.

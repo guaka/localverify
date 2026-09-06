@@ -54,5 +54,11 @@ Debug APK: `app/build/outputs/apk/debug/localverify-debug.apk`.
 For direct build and test execution, use `./gradlew :app:assembleDebug :app:testDebugUnitTest`.
 The bootstrap helper is retained for wrapper recovery; its default version is 8.11.1.
 
+Synthetic UI tests: on a disposable emulator without existing Local Verify cases, set
+`ANDROID_SERIAL` to its serial and run `./gradlew :app:connectedDebugAndroidTest`.
+Two tests cover explicit ZIP share/open intake, consent, analysis, activity recreation,
+and export with/without the original. They generate and inspect fixtures inside the
+emulator. Do not run them on a phone containing actual evidence.
+
 This implementation is intentionally conservative and intentionally mirrors iOS behavior,
 so there is no telemetry and no cloud uploads.
