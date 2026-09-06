@@ -10,6 +10,8 @@ The app bundles a snapshot of Amnesty/MVT indicators for offline analysis. It is
 
 ## Build
 
+Byte-for-byte reproducible builds are not yet verified. See [current status and next steps](docs/REPRODUCIBLEBUILDS.md).
+
 ### iOS
 
 Requires Xcode 16+ and Python 3 for project generation and offline source checks. Python is not included in the app.
