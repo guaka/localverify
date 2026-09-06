@@ -2,7 +2,7 @@
 
 <img src="iOS/App/Assets.xcassets/AppIcon.appiconset/app-icon.png" alt="Local Verify app icon" width="128">
 
-Local Verify is an experimental, local-only iOS 17+ app for importing and reviewing sysdiagnose archives. It has no backend, telemetry, or evidence upload. Android support is planned separately in [docs/ANDROID.md](docs/ANDROID.md).
+Local Verify is an experimental, local-only app for iOS 17+ and Android 11+ for importing and reviewing sysdiagnose archives. It has no backend, telemetry, or evidence upload.
 
 The app bundles a snapshot of Amnesty/MVT indicators for offline analysis. It is not full MVT parity and does not provide comprehensive current-spyware coverage. Results are leads for investigation, not proof of compromise.
 
