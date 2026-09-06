@@ -30,7 +30,6 @@ struct LocalVerifyApp: App {
     @Published var progress = ""
     @Published var activityTitle = "Working on this device"
     @Published var indicators = IndicatorSet.demo
-    @Published var updatingIndicators = false
     @Published var inbox: [URL] = []
     private var job: Task<Void, Never>?
     private var campaignMetadata: [String: [String]] = [:]
@@ -53,18 +52,6 @@ struct LocalVerifyApp: App {
         guard !set.indicators.isEmpty else { throw TriageError.invalid("No supported indicators; current set retained") }
         try LocalStorage.write(JSONEncoder().encode(set), to: indicatorCache)
         indicators = set
-    }
-    func updateIndicators() {
-        guard !updatingIndicators, !busy else { return }
-        updatingIndicators = true
-        Task {
-            defer { updatingIndicators = false }
-            do {
-                let updated = try await ThreatUpdates.download()
-                try activateIndicators(updated)
-                message = "Threat indicators updated. Existing cases keep their original definitions."
-            } catch { message = "Update failed; previous indicators retained. \(error.localizedDescription)" }
-        }
     }
     func useBundledIndicators() {
         do { try activateIndicators(ThreatUpdates.bundled(in: .main)); message = "Using bundled Amnesty and MVT indicators." }
@@ -327,12 +314,9 @@ struct IndicatorsView: View {
                     Text("Includes Pegasus, Predator, Coruna and DarkSword indicators, including research published in 2026. Newest definition date does not mean every campaign was updated then, or that every current threat is covered.").font(.footnote).foregroundStyle(.secondary)
                 }
                 Section("Manage indicators") {
-                    Button("Update threat indicators", systemImage: "arrow.triangle.2.circlepath") { model.updateIndicators() }.disabled(model.busy || model.updatingIndicators).accessibilityIdentifier("updateIndicators")
-                    if model.updatingIndicators { ProgressView("Downloading public definitions…") }
-                    Text("Downloads definitions from Amnesty and MVT's public GitHub repositories. No diagnostics or findings are sent. GitHub sees normal connection metadata, such as your IP address.").font(.caption).foregroundStyle(.secondary)
-                    Button("Import threat indicators", systemImage: "doc.badge.plus") { importing = true }.disabled(model.busy || model.updatingIndicators).accessibilityIdentifier("importIndicators")
+                    Button("Import threat indicators", systemImage: "doc.badge.plus") { importing = true }.disabled(model.busy).accessibilityIdentifier("importIndicators")
                     Text("Advanced: import a STIX2 JSON file supplied by an investigator.").font(.caption).foregroundStyle(.secondary)
-                    Button("Use bundled indicators", systemImage: "shippingbox") { model.useBundledIndicators() }.disabled(model.busy || model.updatingIndicators)
+                    Button("Use bundled indicators", systemImage: "shippingbox") { model.useBundledIndicators() }.disabled(model.busy)
                 }
                 if !model.indicators.unsupported.isEmpty {
                     Section { DisclosureGroup("Unsupported definitions") { ForEach(model.indicators.unsupported, id: \.self) { Text($0).font(.caption) } } }

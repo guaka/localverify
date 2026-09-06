@@ -1,6 +1,6 @@
 # Local data handling
 
-The app contains no upload client, remote analysis service, analytics SDK, telemetry, or background indicator download. Analysis reads only user-imported files and local indicator data. Update threat indicators downloads five fixed public Amnesty/MVT bundles from raw.githubusercontent.com only when tapped. GET requests contain no evidence, findings, cookies, or account credentials. Redirects are rejected. GitHub sees connection metadata such as IP address. Analysis works offline with bundled or cached definitions. Source/license/help links open a browser only when tapped and pass no evidence.
+The app contains no upload client, remote analysis service, analytics SDK, telemetry, or indicator downloader. Analysis reads only user-imported files and local indicator data. Analysis works offline with bundled or locally imported definitions. New definitions can be imported as a local STIX file or shipped in an updated app bundle. Source/license/help links open a browser only when tapped and pass no evidence.
 
 App-owned cases, originals, indicator snapshots, checkpoints, and exports are excluded from automatic backup. iOS files use complete file protection. Share-extension inbox files are protected and their directory excluded from backup; interrupted copies are listed for explicit deletion.
 
@@ -14,4 +14,4 @@ Choosing an input from iCloud Drive may download it via Apple's file provider; L
 
 Deleting a case removes its local original, checkpoints, indicator snapshot, and prepared export. It does not remove the source file in Settings/Files or any previously shared copies. Deletion is filesystem removal, not a forensic secure-erase guarantee.
 
-Reviewed 2026-09-05: the sole app network client downloads public indicators using bounded, fixed-URL GET requests. It receives no case/archive/report parameters. No upload APIs or third-party telemetry dependencies are included. This is source review, not a full external security audit.
+Reviewed 2026-09-06: the indicator network client has been removed. No upload APIs or third-party telemetry dependencies are included. This describes the app's source; it is not an operating-system network block or a full external security audit.

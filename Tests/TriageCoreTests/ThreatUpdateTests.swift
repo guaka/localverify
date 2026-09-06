@@ -8,6 +8,25 @@ final class ThreatUpdateTests: XCTestCase {
             return try ThreatUpdates.feeds.map { try Data(contentsOf: root.appendingPathComponent("iOS/App/ThreatData/\($0.resource).stix2")) }
         }
     }
+    private func temporaryThreatBundle() throws -> URL {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let source = root.appendingPathComponent("iOS/App/ThreatData")
+        let bundleURL = FileManager.default.temporaryDirectory.appendingPathComponent("ThreatUpdatesBundle-\(UUID().uuidString).bundle")
+        try FileManager.default.createDirectory(at: bundleURL, withIntermediateDirectories: true)
+        try FileManager.default.copyItem(at: source.appendingPathComponent("threat-manifest.json"), to: bundleURL.appendingPathComponent("threat-manifest.json"))
+        for feed in ThreatUpdates.feeds {
+            try FileManager.default.copyItem(at: source.appendingPathComponent("\(feed.resource).stix2"), to: bundleURL.appendingPathComponent("\(feed.resource).stix2"))
+        }
+        let info = [
+            "CFBundleIdentifier": "org.mobiletriage.localverify.tests.threatdata",
+            "CFBundleName": "ThreatUpdatesTestBundle",
+            "CFBundleVersion": "1",
+            "CFBundleShortVersionString": "1.0"
+        ]
+        let infoData = try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0)
+        try infoData.write(to: bundleURL.appendingPathComponent("Info.plist"))
+        return bundleURL
+    }
     func testBundledFeedsHaveSupportedIndicatorsAndProvenance() throws {
         let set = try ThreatUpdates.combine(payloads, checkedAt: nil)
         XCTAssertGreaterThan(set.indicators.count, 100)
@@ -26,13 +45,24 @@ final class ThreatUpdateTests: XCTestCase {
         let report = Report(caseID: "snapshot", indicators: set)
         XCTAssertEqual(report.indicatorSources, set.sources)
     }
-    func testLiveDownloadWhenRequested() async throws {
-        guard ProcessInfo.processInfo.environment["TRIAGE_TEST_LIVE_UPDATES"] == "1" else { throw XCTSkip("Set TRIAGE_TEST_LIVE_UPDATES=1 for the public-feed integration check") }
-        let set = try await ThreatUpdates.download()
-        XCTAssertGreaterThan(set.indicators.count, 100)
+    func testBundledThreatDataLoadsFromBundlePath() throws {
+        let bundleURL = try temporaryThreatBundle()
+        defer { try? FileManager.default.removeItem(at: bundleURL) }
+        let bundle = try XCTUnwrap(Bundle(path: bundleURL.path))
+        let set = try ThreatUpdates.bundled(in: bundle)
+        XCTAssertEqual(set.sources?.count, ThreatUpdates.feeds.count)
+        XCTAssertGreaterThan(set.indicators.count, 0)
         XCTAssertNotNil(set.checkedAt)
-        XCTAssertNotNil(set.latestIndicatorDate)
-        XCTAssertGreaterThan(set.byteCount ?? 0, 0)
+        XCTAssertNotNil(set.byteCount)
+    }
+    func testPreferredInstalledSetUsesBundledWhenCachedHasNoCampaignMetadata() throws {
+        let bundled = try ThreatUpdates.combine(payloads, checkedAt: nil)
+        var cached = IndicatorSet(version: bundled.version, indicators: [Indicator(id: "manual", kind: "process:name", value: "manual.invalid")], unsupported: ["demo"])
+        cached.sources = bundled.sources
+        let selected = ThreatUpdates.preferredInstalledSet(cached: cached, bundled: bundled)
+        XCTAssertEqual(selected.version, bundled.version)
+        XCTAssertEqual(selected.sources, bundled.sources)
+        XCTAssertEqual(selected.indicators, bundled.indicators)
     }
     func test2026CollectionsProduceTraceableLeadsWithoutDomainSubstringMatches() throws {
         for data in try payloads.suffix(2) {

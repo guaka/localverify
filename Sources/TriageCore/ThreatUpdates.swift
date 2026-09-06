@@ -42,11 +42,11 @@ public enum ThreatUpdates {
     }
 
     public static func combine(_ payloads: [Data], checkedAt: Date?) throws -> IndicatorSet {
-        guard payloads.count == feeds.count else { throw TriageError.invalid("Incomplete indicator update") }
+        guard payloads.count == feeds.count else { throw TriageError.invalid("Incomplete indicator collection") }
         var hash = SHA256(); var indicators: [Indicator] = []; var unsupported: [String] = []; var dates: [Date] = []
         var seen: [String: Int] = [:]
         for (index, data) in payloads.enumerated() {
-            guard data.count <= maximumBytes else { throw TriageError.invalid("Indicator download exceeds 5 MiB") }
+            guard data.count <= maximumBytes else { throw TriageError.invalid("Indicator file exceeds 5 MiB") }
             let parsed = try IndicatorSet.parse(data)
             guard !parsed.indicators.isEmpty else { throw TriageError.invalid("\(feeds[index].name) contains no supported indicators") }
             hash.update(data: data)
@@ -83,35 +83,4 @@ public enum ThreatUpdates {
         }, checkedAt: date)
     }
 
-    public static func download() async throws -> IndicatorSet {
-        let config = URLSessionConfiguration.ephemeral
-        config.httpCookieStorage = nil; config.httpShouldSetCookies = false
-        config.urlCredentialStorage = nil; config.urlCache = nil
-        config.timeoutIntervalForRequest = 30; config.timeoutIntervalForResource = 90
-        let session = URLSession(configuration: config, delegate: NoRedirects(), delegateQueue: nil)
-        defer { session.invalidateAndCancel() }
-        var payloads: [Data] = []
-        for feed in feeds {
-            var request = URLRequest(url: feed.url)
-            request.httpMethod = "GET"
-            request.cachePolicy = .reloadIgnoringLocalCacheData
-            let (bytes, response) = try await session.bytes(for: request)
-            guard let http = response as? HTTPURLResponse, http.statusCode == 200,
-                  response.url == feed.url, response.expectedContentLength <= Int64(maximumBytes) else {
-                throw TriageError.invalid("Could not download \(feed.name); previous indicators retained")
-            }
-            var data = Data()
-            for try await byte in bytes {
-                try Task.checkCancellation()
-                guard data.count < maximumBytes else { throw TriageError.invalid("Indicator download exceeds 5 MiB") }
-                data.append(byte)
-            }
-            payloads.append(data)
-        }
-        return try combine(payloads, checkedAt: Date())
-    }
-}
-
-private final class NoRedirects: NSObject, URLSessionTaskDelegate {
-    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) { completionHandler(nil) }
 }
