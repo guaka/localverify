@@ -14,10 +14,11 @@ This is a Kotlin/Jetpack Compose native Android implementation started from
   - supported text extensions: `ips`, `json`, `log`, `txt`, `crash`
   - skipped unsupported entries and unsafe paths
 - Cancellation-aware analysis with on-disk checkpoint after each analyzed file.
-- Resume behavior using checkpoints when re-running incomplete cases.
+- Stop retains an incomplete report and the imported archive. Starting again rescans from the beginning and replaces partial results; checkpoint resume is deferred.
 - Case report model aligned with the iOS report contract (`platform = android`).
 - Export ZIP (`report.json`, `report.html`, optional original archive).
 - Internal backup exclusion via manifest/private storage policy.
+- Local analysis starts directly when the user taps Start; no consent checkbox. Sharing requires an explicit export action, with original archive inclusion opt-in.
 - Coverage matrix persistence (`app/src/main/assets/fixtures/matching.json` is vendored for parity testing).
 
 ## Run in Android Studio
@@ -56,7 +57,7 @@ The bootstrap helper is retained for wrapper recovery; its default version is 8.
 
 Synthetic UI tests: on a disposable emulator without existing Local Verify cases, set
 `ANDROID_SERIAL` to its serial and run `./gradlew :app:connectedDebugAndroidTest`.
-Two tests cover explicit ZIP share/open intake, consent, analysis, activity recreation,
+Two tests target explicit ZIP share/open intake, direct analysis, activity recreation,
 and export with/without the original. They generate and inspect fixtures inside the
 emulator. Do not run them on a phone containing actual evidence.
 

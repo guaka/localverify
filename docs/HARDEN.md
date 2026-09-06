@@ -1,6 +1,6 @@
 # LocalVerify hardening plan
 
-Status: proposed work, not implemented guarantees. Scope: iOS and the developing Android module. The baseline below describes iOS; Android parity must be verified separately against [ANDROID.md](ANDROID.md) and its [validation matrix](ANDROID-VALIDATION-MATRIX.md).
+Status: implementation in progress; the plan below includes work still outstanding. Scope: iOS and the developing Android module. The baseline below describes iOS; Android parity must be verified separately against [ANDROID.md](ANDROID.md) and its [validation matrix](ANDROID-VALIDATION-MATRIX.md).
 
 LocalVerify should remain useful when inputs are malicious, report incomplete analysis honestly, and avoid unnecessarily revealing findings. It cannot guarantee correct or secret execution when the attacker controls the OS or LocalVerify's process. “No matches” must never become “this phone is safe.”
 
@@ -84,3 +84,16 @@ Android references: [secure sensitive activities](https://developer.android.com/
 1. Complete the two P0 tracks and add their synthetic acceptance checks to the release gate.
 2. Complete P1 provenance, definition trust, and release review; document remaining coverage limits.
 3. Design P2 with investigator input and commission an independent adversarial review. Report tested attacker capabilities and residual risks, rather than a blanket claim that LocalVerify works secretly on any infected phone.
+
+
+## Implementation record — 2026-09-06
+
+Implemented in this hardening pass:
+
+- Both engines preflight JSON complexity and bound text lines, indicator metadata, and fallback matching work. Dense-match limits preserve earlier findings and leave analysis incomplete; originals are checked again before completion.
+- iOS uses bounded indicator reads and checkpoint loading, validates loaded case identity, removes sensitive live progress and automatic finding navigation, and synchronously covers its window when leaving the foreground.
+- Android distinguishes skipped/invalid UTF-8 entries from analyzed files, checks ZIP central-directory presence, uses atomic bounded local records, verifies actual indicator snapshot hashes, and streams original evidence into a temporary export before publishing it. Failed/replaced cases cannot reuse old analysis; deletion also removes prepared exports.
+- Android hides results until reveal, sets secure-window/overlay protection, excludes originals from exports by default, and removes unnecessary browser intent handling. Both HTML exporters add a restrictive content security policy.
+- Android follows its current product decisions: no consent gate, Stop remains, and every new attempt starts from the beginning. Checkpoints preserve incomplete reports, not resume cursors. See [ANDROID-HANDOFF.md](ANDROID-HANDOFF.md).
+
+Still outstanding: comprehensive fuzzing/resource measurements on physical devices; stronger input-handle binding; full disk/lock/fault-injection coverage; signed offline definition packages and key lifecycle; independent release/security review; parser-process isolation; and the separately authorized trusted-system investigation workflow. These changes do not establish detection effectiveness, constant-time behavior, or secrecy against a compromised OS. Current test evidence is recorded in the platform validation docs.

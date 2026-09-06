@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <uses-permission android:name="android.permission.HIDE_OVERLAY_WINDOWS" />
+
     <application
         android:allowBackup="false"
+        android:fullBackupContent="false"
         android:dataExtractionRules="@xml/no_backup"
         android:label="Local Verify"
         android:networkSecurityConfig="@xml/network_security_config"
@@ -46,8 +49,8 @@
 
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
+                <data android:scheme="content" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
                 <data android:mimeType="application/x-zip-compressed" />
                 <data android:mimeType="application/x-gzip-compressed" />
                 <data android:mimeType="application/tar" />

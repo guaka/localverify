@@ -84,18 +84,36 @@ $findings
             require(originalHash == report.archiveSHA256) { "Original evidence hash changed; export stopped" }
         }
 
-        val out = ZipOutputStream(FileOutputStream(destination))
+        val partial = File(destination.path + ".partial")
         try {
-            addStoredEntry(out, "report.json", toJson(report).toByteArray())
-            addStoredEntry(out, "report.html", html(report).toByteArray())
-            if (original != null) {
-                require(original.length().toLong() < MAX_ZIP_ENTRY_BYTES)
-                addStoredEntry(out, "original.tar.gz", original.readBytes())
+            ZipOutputStream(FileOutputStream(partial)).use { out ->
+                addStoredEntry(out, "report.json", toJson(report).toByteArray())
+                addStoredEntry(out, "report.html", html(report).toByteArray())
+                if (original != null) {
+                    require(original.length() < MAX_ZIP_ENTRY_BYTES) { "Evidence exceeds ZIP limit" }
+                    val gzip = original.inputStream().use { it.read() == 0x1f && it.read() == 0x8b }
+                    out.putNextEntry(ZipEntry(if (gzip) "original.tar.gz" else "original.zip"))
+                    val digest = java.security.MessageDigest.getInstance("SHA-256")
+                    var total = 0L
+                    original.inputStream().use { input ->
+                        val buffer = ByteArray(65536)
+                        while (true) {
+                            val count = input.read(buffer)
+                            if (count < 0) break
+                            if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException()
+                            total += count
+                            require(total < MAX_ZIP_ENTRY_BYTES) { "Evidence exceeds ZIP limit" }
+                            digest.update(buffer, 0, count)
+                            out.write(buffer, 0, count)
+                        }
+                    }
+                    check(digest.digest().joinToString("") { "%02x".format(it) } == report.archiveSHA256) { "Evidence changed during export" }
+                    out.closeEntry()
+                }
             }
-        } finally {
-            out.close()
-        }
-        require(destination.length() < MAX_ZIP_ENTRY_BYTES)
+            require(partial.length() < MAX_ZIP_ENTRY_BYTES) { "Export exceeds ZIP limit" }
+            java.nio.file.Files.move(partial.toPath(), destination.toPath(), java.nio.file.StandardCopyOption.ATOMIC_MOVE, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        } finally { partial.delete() }
     }
 
     private fun addStoredEntry(zip: ZipOutputStream, name: String, bytes: ByteArray) {

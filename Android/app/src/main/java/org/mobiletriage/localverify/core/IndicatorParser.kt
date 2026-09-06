@@ -11,7 +11,9 @@ private val STIX_PATTERN = Pattern.compile("^\\s*\\[\\s*([a-z-]+:[a-z]+)\\s*=\\s
 
 object IndicatorParser {
     fun parse(data: ByteArray): IndicatorSet {
+        require(data.size <= InputLimits.INDICATOR_BYTES) { "Indicator file exceeds 5 MiB" }
         val text = data.toString(StandardCharsets.UTF_8)
+        InputLimits.json(text)
         val root = try { JSONObject(text) } catch (_: Exception) { throw IllegalArgumentException("Expected a STIX2 bundle") }
         if (root.optString("type") != "bundle") throw IllegalArgumentException("Expected a STIX2 bundle")
 
@@ -30,6 +32,7 @@ object IndicatorParser {
                 continue
             }
             val pattern = item.optString("pattern", "")
+            require(id.length <= 1024 && pattern.length <= 8192) { "Indicator metadata limit reached" }
             val matcher = STIX_PATTERN.matcher(pattern)
             if (!matcher.find()) {
                 skipped.add("$id: unsupported pattern")
@@ -60,6 +63,7 @@ object IndicatorParser {
                 List(it.length()) { idx -> it.optString(idx) }.filter { it.isNotBlank() }
             }
 
+            require(campaigns.orEmpty().size <= 16 && campaigns.orEmpty().all { it.length <= 128 }) { "Campaign metadata limit reached" }
             indicators.add(Indicator(id = id, kind = kind, value = value, campaigns = campaigns?.ifEmpty { null }))
 
             val modified = item.optString("modified", item.optString("created", ""))

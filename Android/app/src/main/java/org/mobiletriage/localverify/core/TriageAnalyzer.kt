@@ -34,41 +34,68 @@ object TriageAnalyzer {
         onProgress: (String) -> Unit,
         onCheckpoint: (Report) -> Unit,
     ): Report {
+        require(report.schemaVersion == 1 && report.findings.size <= MAX_FINDINGS && report.analyzed.size <= 100_000) { "Invalid report" }
+        InputLimits.indicators(indicators.indicators)
+        report.engineVersion = "0.4.0-android-hardened"
+        // Checkpoints retain incomplete results for review, never a resume cursor.
+        report.analyzed.clear()
+        report.findings.clear()
+        report.skipped = indicators.unsupported.toMutableList()
         report.analysisStartedAt = System.currentTimeMillis()
         report.analysisFinishedAt = null
         report.completed = false
         report.errors.clear()
 
-        onProgress("Verifying original archive")
-        val digest = ArchiveUtil.hashFile(archive)
-        if (report.archiveSHA256.isNotEmpty() && report.archiveSHA256 != digest) {
-            report.errors.add("Evidence changed since previous run")
-            return report
-        }
-        report.archiveSHA256 = digest
-        onCheckpoint(report)
-
-        val done = report.analyzed.toSet()
-        onProgress("Reading archive")
         try {
+            onCheckpoint(report)
+            if (isCancelled()) throw java.util.concurrent.CancellationException("Analysis interrupted")
+            onProgress("Verifying original archive")
+            val digest = ArchiveUtil.hashFile(archive)
+            if (report.archiveSHA256.isNotEmpty() && report.archiveSHA256 != digest) {
+                report.errors.add("Evidence changed since previous run")
+                onCheckpoint(report)
+                return report
+            }
+            report.archiveSHA256 = digest
+            onCheckpoint(report)
+
+            onProgress("Reading archive")
             ArchiveUtil.walkArchive(
                 file = archive,
-                onProgress = { _, path -> path?.let { onProgress("Checking $it") } ?: onProgress("Reading archive") },
+                onProgress = { _, _ ->
+                    if (isCancelled()) throw java.util.concurrent.CancellationException("Analysis interrupted")
+                    onProgress("Reading archive")
+                },
                 onVisit = { path, payload, reason ->
                     if (isCancelled()) throw java.util.concurrent.CancellationException("Analysis interrupted")
-                    if (done.contains(path) || report.analyzed.contains(path)) return@walkArchive
 
                     if (payload == null) {
                         val note = "$path: ${reason ?: "unsupported"}"
                         if (!report.skipped.contains(note)) report.skipped.add(note)
+                        onCheckpoint(report)
+                        return@walkArchive
                     } else {
-                        val text = String(payload, StandardCharsets.UTF_8)
+                        val text = try {
+                            StandardCharsets.UTF_8.newDecoder()
+                                .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
+                                .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
+                                .decode(java.nio.ByteBuffer.wrap(payload)).toString()
+                        } catch (_: java.nio.charset.CharacterCodingException) {
+                            val note = "$path: non-UTF8 data"
+                            if (!report.skipped.contains(note)) report.skipped.add(note)
+                            onCheckpoint(report)
+                            return@walkArchive
+                        }
                         if (text.isNotBlank()) {
-                            report.findings += scanText(
+                            report.findings.removeAll { it.source == path }
+                            scanText(
                                 text = text,
                                 source = path,
                                 indicators = indicators.indicators,
-                                progressHint = { onProgress("Checking $path") }
+                                progressHint = { onProgress("Checking file") },
+                                findingLimit = MAX_FINDINGS - report.findings.size,
+                                onFinding = { report.findings.add(it) },
+                                isCancelled = isCancelled
                             )
                             if (report.findings.size > MAX_FINDINGS) {
                                 throw IllegalStateException("Finding limit reached")
@@ -81,11 +108,13 @@ object TriageAnalyzer {
             )
             if (report.analyzed.isEmpty()) report.errors.add("No supported text or structured records were analyzed")
             if (indicators.indicators.isEmpty()) report.errors.add("No supported indicators available")
+            check(ArchiveUtil.hashFile(archive) == digest) { "Evidence changed during analysis" }
             report.completed = true
             report.analysisFinishedAt = System.currentTimeMillis()
         } catch (error: Exception) {
             report.errors.add(
-                if (error is java.util.concurrent.CancellationException) "Analysis interrupted; resume to continue"
+                if (error is java.util.concurrent.CancellationException || isCancelled() || Thread.currentThread().isInterrupted)
+                    "Analysis stopped; results are incomplete. Start again to scan the archive from the beginning."
                 else error.message ?: "Analysis failed"
             )
             onCheckpoint(report)
@@ -100,8 +129,23 @@ object TriageAnalyzer {
         source: String,
         indicators: List<Indicator>,
         progressHint: (String) -> Unit,
+        findingLimit: Int = MAX_FINDINGS,
+        onFinding: (Finding) -> Unit = {},
+        isCancelled: () -> Boolean = { Thread.currentThread().isInterrupted },
     ): List<Finding> {
+        InputLimits.text(text)
+        InputLimits.indicators(indicators)
+        fun checkCancelled() {
+            if (isCancelled() || Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("Analysis interrupted")
+        }
+        checkCancelled()
         val findings = ArrayList<Finding>()
+        fun append(finding: Finding) {
+            check(findings.size < findingLimit) { "Finding limit reached" }
+            findings.add(finding)
+            onFinding(finding)
+        }
+        var workBytes = 0L
         val lines = text.split('\n')
 
         val boundaries = arrayOf("A-Za-z0-9_.-", "A-Za-z0-9_./:%?=&-")
@@ -109,15 +153,16 @@ object TriageAnalyzer {
         val sought = arrayOf(HashSet<String>(), HashSet<String>())
 
         for (indicator in indicators) {
+            checkCancelled()
             val group = if (indicator.kind == "domain-name:value") 0 else 1
             val token = indicator.value.all { ch ->
                 when (group) {
-                    0 -> ch.isLetterOrDigit() || ch in listOf('.', '_', '-')
-                    else -> ch.isLetterOrDigit() || ch in listOf('.', '_', '/', ':', '%', '?', '&', '=')
+                    0 -> (ch in 'a'..'z' || ch in 'A'..'Z' || ch in '0'..'9') || ch in listOf('.', '_', '-')
+                    else -> (ch in 'a'..'z' || ch in 'A'..'Z' || ch in '0'..'9') || ch in listOf('.', '_', '/', ':', '%', '?', '&', '=')
                 }
             }
             val key = if (token) {
-                if (group == 0) indicator.value.lowercase(Locale.getDefault()) else indicator.value
+                if (group == 0) indicator.value.lowercase(Locale.ROOT) else indicator.value
             } else null
             tokenKeys.add(key)
             if (key != null) sought[group].add(key)
@@ -129,9 +174,10 @@ object TriageAnalyzer {
             val tokenPattern = Pattern.compile("[${boundaries[group]}]+", if (group == 0) Pattern.CASE_INSENSITIVE else 0)
             val matcher = tokenPattern.matcher(text)
             while (matcher.find()) {
+                checkCancelled()
                 val tokenValue = matcher.group()
                 if (tokenValue.length > 2048) continue
-                val normalized = if (group == 0) tokenValue.lowercase(Locale.getDefault()) else tokenValue
+                val normalized = if (group == 0) tokenValue.lowercase(Locale.ROOT) else tokenValue
                 if (sought[group].contains(normalized)) {
                     present[group].add(normalized)
                 }
@@ -141,22 +187,23 @@ object TriageAnalyzer {
         val structured = collectStructuredRecords(text)
         val index = HashMap<String, MutableList<Triple<String, String, String?>>>()
         for ((fieldPath, observed, ts) in structured) {
-            val leaf = fieldPath.substringAfterLast('.').lowercase(Locale.getDefault())
+            val leaf = fieldPath.substringAfterLast('.').lowercase(Locale.ROOT)
             val kind = FIELD_ALIASES[leaf] ?: continue
-            val normalizedValue = if (kind == "domain-name:value") observed.lowercase(Locale.getDefault()).trim('.') else observed
+            val normalizedValue = if (kind == "domain-name:value") observed.lowercase(Locale.ROOT).trim('.') else observed
             val key = "$kind\u0000$normalizedValue"
             index.getOrPut(key) { ArrayList() }.add(Triple(fieldPath, observed, ts))
         }
 
         for ((indicatorIndex, indicator) in indicators.withIndex()) {
-            progressHint("Checking ${indicator.id}")
+            checkCancelled()
+            progressHint("Checking definitions")
 
             val structuredKey = "${indicator.kind}\u0000${normalize(indicator.kind, indicator.value)}"
             val structuredMatches = index[structuredKey]
             if (!structuredMatches.isNullOrEmpty()) {
                 for ((fieldPath, observed, ts) in structuredMatches) {
-                    findings.add(makeFinding(indicator, source, fieldPath, observed, ts, "structured"))
-                    if (findings.size >= MAX_FINDINGS) throw IllegalStateException("Finding limit reached")
+                    append(makeFinding(indicator, source, fieldPath, observed, ts, "structured"))
+
                 }
                 continue
             }
@@ -169,13 +216,13 @@ object TriageAnalyzer {
             val tokenRegex = Pattern.compile("(?<![$boundary])${Pattern.quote(indicator.value)}(?![$boundary])",
                 if (group == 0) Pattern.CASE_INSENSITIVE else 0)
             for (lineIndex in lines.indices) {
-                if (lineIndex % 256 == 0 && (lineIndex > 0) && Thread.interrupted()) {
-                    throw java.util.concurrent.CancellationException("Analysis interrupted")
-                }
+                if (lineIndex % 256 == 0) checkCancelled()
                 val line = lines[lineIndex]
+                workBytes += line.length + 1
+                check(workBytes <= 128L * 1024 * 1024) { "Text matching work limit reached" }
                 if (tokenRegex.matcher(line).find()) {
-                    findings.add(makeFinding(indicator, source, "line ${lineIndex + 1}", line.take(600), null, "raw-text"))
-                    if (findings.size >= MAX_FINDINGS) throw IllegalStateException("Finding limit reached")
+                    append(makeFinding(indicator, source, "line ${lineIndex + 1}", line.take(600), null, "raw-text"))
+
                 }
             }
         }
@@ -184,7 +231,7 @@ object TriageAnalyzer {
     }
 
     private fun normalize(kind: String, value: String): String {
-        return if (kind == "domain-name:value") value.lowercase(Locale.getDefault()).trim('.') else value
+        return if (kind == "domain-name:value") value.lowercase(Locale.ROOT).trim('.') else value
     }
 
     private fun makeFinding(
@@ -208,52 +255,41 @@ object TriageAnalyzer {
             } else {
                 "Indicator appears in text; this may be incidental and requires contextual review."
             },
-            excerpt = excerpt,
+            excerpt = excerpt.take(600),
             campaigns = indicator.campaigns,
         )
     }
 
     private fun collectStructuredRecords(text: String): List<Triple<String, String, String?>> {
+        var nodes = 0
         fun parse(value: Any?, path: String, timestamp: String?, out: MutableList<Triple<String, String, String?>>) {
+            nodes++
+            check(nodes <= 100_000 && path.length <= 4096) { "Structured record limit reached" }
+            if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("Analysis interrupted")
             when (value) {
                 is JSONObject -> {
                     val time = value.optString("timestamp", value.optString("captureTime", timestamp))
-                    for (key in value.keys()) {
-                        parse(value.get(key), "$path.$key", time?.takeIf { it.isNotBlank() }, out)
-                    }
+                    for (key in value.keys()) parse(value.get(key), "$path.$key", time?.takeIf { it.isNotBlank() }, out)
                 }
-                is JSONArray -> {
-                    for (i in 0 until value.length()) {
-                        parse(value.get(i), "$path[$i]", timestamp, out)
-                    }
-                }
-                is String -> out.add(Triple(path, value, timestamp))
+                is JSONArray -> for (i in 0 until value.length()) parse(value.get(i), "$path[$i]", timestamp, out)
+                is String -> if (value.length <= 8192) out.add(Triple(path, value, timestamp?.take(256)))
             }
         }
-
+        fun decode(candidate: String): Any? {
+            val trimmed = candidate.trimStart()
+            if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return null
+            InputLimits.json(candidate)
+            return try {
+                if (trimmed.startsWith("[")) JSONArray(candidate) else JSONObject(candidate)
+            } catch (_: org.json.JSONException) { null }
+        }
         val result = ArrayList<Triple<String, String, String?>>()
-        val full = try {
-            val root = JSONObject(text)
-            parse(root, "$", null, result)
-            true
-        } catch (_: Exception) {
-            false
-        }
-
-        if (full) return result
-
-        val lines = text.lines()
-        if (lines.isEmpty()) return result
-        runCatching {
-            val header = JSONObject(lines.first())
-            parse(header, "\$header", null, result)
-        }
-        if (lines.size > 1) {
-            val body = lines.drop(1).joinToString("\n")
-            runCatching {
-                val bodyJson = JSONObject(body)
-                parse(bodyJson, "\$body", null, result)
-            }
+        val full = decode(text)
+        if (full != null) { parse(full, "$", null, result); return result }
+        val newline = text.indexOf('\n')
+        if (newline >= 0) {
+            decode(text.substring(0, newline))?.let { parse(it, "\$header", null, result) }
+            decode(text.substring(newline + 1))?.let { parse(it, "\$body", null, result) }
         }
         return result
     }

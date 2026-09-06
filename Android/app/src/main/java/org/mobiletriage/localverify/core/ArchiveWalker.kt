@@ -15,7 +15,7 @@ private const val ENTRY_SIZE_LIMIT_BYTES = 16L * 1024 * 1024
 private val SUPPORTED_EXTENSIONS = setOf("ips", "json", "txt", "log", "crash")
 
 private fun safePath(path: String): Boolean {
-    if (path.isEmpty()) return false
+    if (path.isEmpty() || path.length > 1024) return false
     if (path.startsWith('/')) return false
     if (path.contains('\\')) return false
     return !path.split('/').contains("..")
@@ -41,6 +41,7 @@ private class TarReader(input: GZIPInputStream) {
         val result = ByteArray(bytes)
         var total = 0
         while (total < bytes) {
+            if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException()
             val read = stream.read(result, total, bytes - total)
             if (read < 0) throw IllegalStateException("Truncated or corrupt gzip/tar archive")
             total += read
@@ -128,6 +129,7 @@ object ArchiveUtil {
         BufferedInputStream(FileInputStream(file)).use { input ->
             val buffer = ByteArray(1024 * 1024)
             while (true) {
+                if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException()
                 val read = input.read(buffer)
                 if (read < 0) break
                 md.update(buffer, 0, read)
@@ -149,9 +151,9 @@ object ArchiveUtil {
         }
         raw.close()
 
-        val stream = GZIPInputStream(BufferedInputStream(FileInputStream(file)))
-        TarReader(stream).walk(onProgress, onVisit)
-        stream.close()
+        GZIPInputStream(BufferedInputStream(FileInputStream(file))).use { stream ->
+            TarReader(stream).walk(onProgress, onVisit)
+        }
     }
 
     private fun walkZipArchive(
@@ -159,6 +161,11 @@ object ArchiveUtil {
         onProgress: (Long, String?) -> Unit,
         onVisit: (String, ByteArray?, String?) -> Unit,
     ) {
+        // Require a central directory before accepting stream results as complete.
+        val expectedEntries = java.util.zip.ZipFile(file).use { directory ->
+            require(directory.size() <= MAX_ENTRY_COUNT) { "Too many archive entries" }
+            directory.size()
+        }
         val regularPaths = HashSet<String>()
         var entries = 0
         var expandedBytes = 0L
@@ -170,10 +177,6 @@ object ArchiveUtil {
                 if (entries > MAX_ENTRY_COUNT) throw IllegalStateException("Too many archive entries")
                 val path = entry.name
                 if (!safePath(path)) throw IllegalStateException("Unsafe archive path")
-                if (entry.isDirectory) {
-                    zip.closeEntry()
-                    continue
-                }
                 if (!regularPaths.add(path)) throw IllegalStateException("Duplicate archive path")
 
                 val extension = path.substringAfterLast('.', "").lowercase()
@@ -201,10 +204,11 @@ object ArchiveUtil {
 
                 val finalReason = reason ?: supportedEntryReason(path, totalRead)
                 val finalPayload = if (finalReason == null) payload.toByteArray() else null
-                onVisit(path, finalPayload, finalReason)
+                if (!entry.isDirectory) onVisit(path, finalPayload, finalReason)
                 onProgress(expandedBytes, path)
                 zip.closeEntry()
             }
+            check(entries == expectedEntries) { "ZIP directory disagrees with stream" }
         } finally {
             zip.close()
         }
@@ -219,17 +223,18 @@ object ArchiveUtil {
 
     fun copyToPrivate(source: java.io.InputStream, destination: File, onBytes: (Int) -> Unit = {}) {
         destination.parentFile?.mkdirs()
-        val output = destination.outputStream()
-        val buffer = ByteArray(1024 * 1024)
-        var total = 0L
-        while (true) {
-            val read = source.read(buffer)
-            if (read < 0) break
-            total += read
-            if (total > MAX_EXPANDED_BYTES) throw IllegalStateException("Compressed archive exceeds 8 GiB import limit")
-            output.write(buffer, 0, read)
-            onBytes(read)
+        destination.outputStream().use { output ->
+            val buffer = ByteArray(1024 * 1024)
+            var total = 0L
+            while (true) {
+                if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException()
+                val read = source.read(buffer)
+                if (read < 0) break
+                total += read
+                if (total > MAX_EXPANDED_BYTES) throw IllegalStateException("Compressed archive exceeds 8 GiB import limit")
+                output.write(buffer, 0, read)
+                onBytes(read)
+            }
         }
-        output.close()
     }
 }

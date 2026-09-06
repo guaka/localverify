@@ -2,6 +2,8 @@
 
 Last updated: 2026-09-06
 
+Current validation: 9 API 36 emulator tests and 17 JVM tests pass; debug assembly and lint succeed. See the [current validation record](ANDROID-VALIDATION-MATRIX.md#current-hardening-and-workflow-validation--2026-09-06) for coverage, limitations, and the APK hash.
+
 ## Scope
 
 Implement a native Android 11+ (API 30+) triage flow that mirrors the same local-only workflow as iOS:
@@ -20,7 +22,7 @@ Validation evidence file: [docs/ANDROID-VALIDATION-MATRIX.md](./ANDROID-VALIDATI
 The Android module exists at `Android/` and currently includes:
 
 - Compose shell and workflow UI in `Android/app/src/main/java/org/mobiletriage/localverify/ui/MainActivity.kt`
-  - Consent gate
+  - Direct user-initiated local analysis; no consent checkbox
   - Archive picker
   - Indicators picker
   - Start/stop analysis
@@ -61,12 +63,12 @@ The Android module exists at `Android/` and currently includes:
   - MIME values are normalized case-insensitively and tolerate common parameter suffixes (for example `application/zip; charset=utf-8`).
 - ✅ `Indicator`/analysis checkpointing model present:
   - Report is checkpointed during analysis (`onCheckpoint` every visited path)
-  - Resume intent is supported by reusing prior report state
+  - Incomplete results are retained for review; a new attempt clears scan progress and partial findings and scans from the beginning.
 - ✅ Export zip includes report JSON, report HTML, optional original archive.
 - ✅ Manifest sets backup exclusion (`allowBackup="false"` and `dataExtractionRules`) and includes FileProvider.
 - ✅ Foreground/background interruption and intent hardening in UI layer:
   - Activity uses `singleTop` with `onNewIntent` for shared intake (`ACTION_SEND`/`ACTION_VIEW`)
-  - `onStop`/`onDestroy` interrupts active analysis so checkpoints can be resumed.
+  - `onStop`/`onDestroy` interrupts active analysis. The UI explains that switching apps or locking the screen stops the run; the imported archive remains available for a fresh attempt.
 - ✅ Matching parity coverage now has fixture-driven unit coverage for:
   - domain-name indicators (raw-text + structured)
   - process indicators
@@ -88,11 +90,11 @@ The Android module exists at `Android/` and currently includes:
 
 - Manufacturer and collection-path guidance is present but not yet validated for real devices.
 - Shared evidence parsing parity against upstream Android-MVT checks is not yet fully validated.
-- Synthetic ZIP intake via explicit share/view intents passed on an Android 16/API 36 emulator. Document-picker navigation, implicit intent resolution, other formats, and physical-device validation remain pending.
+- Current API 36 emulator tests cover document-picker archive/indicator imports, package-scoped implicit share/open resolution, ZIP/tar.gz inputs, malformed input, lifecycle interruption/restart, rotation/recreation, and exports. Physical-device validation remains pending.
 - Android `ACTION_VIEW` intent handling is configured with `DEFAULT` + `BROWSABLE` and needs device-path coverage.
 - Signed APK/release packaging pipeline not completed (release Gradle signing hook is now documented).
 - Keystore-based release signing is optional via env vars in `Android/app/build.gradle.kts`; unsigned release builds still allowed for local CI parity checks.
-- Resume behavior from interruption is implemented through checkpoint writes; full on-device resume verification is still pending.
+- Checkpoint resume is deferred by product decision. Stop and restart-from-beginning are implemented; physical-device interruption checks remain pending.
 
 ## Android parity table (current)
 
@@ -128,11 +130,11 @@ Legend: `✅` implemented, `🟠` implemented but not validated on physical devi
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| Consent gate | ✅ | Gated start button and local checkbox state. |
+| Start local analysis | ✅ | Explicit Start action with no consent checkbox or timestamp requirement. Sharing requires the export action. |
 | Progress + cancellation | 🟠 | Implemented via thread/callback model; app-stop/onDestroy interruption flips stop flag and interrupts worker thread. |
-| Resume from checkpoint | 🟠 | Resume writes/checkpoints exist, end-to-end restart validation pending. |
+| Restart after interruption | 🟠 | Each attempt clears previous progress/findings and rescans the retained archive; JVM regression tests pass. API 36 Stop/background/lock tests pass; physical-device checks remain. Checkpoint resume is deferred. |
 | Freeze indicators per-case | ✅ | Indicators written under case directory per run. |
-| Export with optional original archive | 🟠 | Toggle exists; missing-source and export-failure messaging are surfaced via status/toast paths, and end-to-end validation is still pending. |
+| Export with optional original archive | 🟠 | API 36 report-only and opt-in original export checks pass, including byte equality and forced write failure. Originals stream through a temporary ZIP; physical-device checks remain. |
 
 ### Delivery hardening
 
@@ -147,12 +149,24 @@ Legend: `✅` implemented, `🟠` implemented but not validated on physical devi
 
 ### Verified local execution status (2026-09-06)
 
+- Historical consent-free build before the current full emulator run: `:app:testDebugUnitTest :app:assembleDebug` passed, with 17 JVM tests across six suites (including seven current hardening tests). No failures/errors/skips. Instrumentation was not rerun.
+- Current APK SHA-256: `f2ecd7caa53c3a7593e58ad2b16787cc946cd3cca32f031e57af9e98429d9956`. Earlier hashes below identify earlier milestones only.
+- Continuation instructions: [ANDROID-HANDOFF.md](./ANDROID-HANDOFF.md).
+- Current product policy: no consent gate for local analysis. `Start analysis` runs directly; no new consent timestamp is generated. The optional legacy report field remains for compatibility. Sharing is user-initiated through export; original-archive inclusion remains opt-in.
+- Latest restart-policy run: 15 JVM tests passed across six suites, zero failures/errors/skips, and debug assembly succeeded. This includes five newer hardening tests and two new stop/restart regression tests.
+- Regression evidence: cancellation after the first matching file preserves incomplete results; reloading the report and starting again rescans both files with fresh finding IDs, no duplicates, retained consent, and unchanged archive bytes. Immediate cancellation also leaves the report incomplete.
+- UI now says `Start analysis`, explains stop-on-background and restart behavior, and scrolls so the guidance and controls remain reachable.
+- Latest restart-build APK SHA-256: `271b0a4571e25c9c82633d1c7627d33cece56c4d076a663026af90f2607a8b6a`.
+- The earlier two emulator test results below are historical. Instrumentation has not been rerun for the restart policy or newer import/privacy UI; those tests need adaptation to the confirmation dialog and default report-only export before claiming current device coverage.
+
+Earlier build and emulator milestones:
+
 - `:app:testDebugUnitTest :app:assembleDebug --console=plain`: **BUILD SUCCESSFUL**, exit 0.
 - Follow-up: `./scripts/run-android-plan.sh` passed using the included checksum-pinned Gradle 8.11.1 wrapper with no standalone Gradle on PATH. Preflight passed; build and test outputs were up-to-date from the successful run below.
 - Eight JVM tests passed across five suites, with zero failures, errors, or skips. `MatchingParityTest` exercises nine synthetic fixture rows.
 - Suites: `ArchivePolicyTest` (2), `ArchiveWalkerTest` (3), `IndicatorParserParityTest` (1), `MatchingParityTest` (1), `TriageAnalyzerTest` (1).
 - Debug-signed APK: `Android/app/build/outputs/apk/debug/localverify-debug.apk`; the filename is configured for subsequent debug builds.
-- Latest APK SHA-256: `bd39b85e807c8e24576d1db8716b4ab6ffe52258220d02c54d6a90664f50e3b6` (rebuilt after the consent-persistence fix).
+- Earlier APK SHA-256: `bd39b85e807c8e24576d1db8716b4ab6ffe52258220d02c54d6a90664f50e3b6` (consent-persistence milestone, superseded by the restart build above).
 - Test report: `Android/app/build/reports/tests/testDebugUnitTest/index.html`; XML results: `Android/app/build/test-results/testDebugUnitTest/`.
 - Build fixes include the Material Components XML theme dependency, Compose compiler 1.5.14 alignment with Kotlin 1.9.24, and nullable-value/activity callback corrections.
 - Test-run fixes include explicit Gson fixture typing, archive output stream selection, a nullable sources assertion, and a test-only Android-compatible JSON implementation (`com.vaadin.external.google:android-json:0.0.20131108.vaadin1`).
@@ -219,7 +233,7 @@ Steps:
 5. Open app and validate:
    - Import a generated synthetic bug-report zip and indicators bundle.
    - Validate picker and share/open intent intake (`ACTION_SEND` and `ACTION_VIEW`) for `.zip`, `.gz`, `.tgz`, `.tar.gz`.
-   - Run analysis with consent.
+   - Start local analysis directly; no consent checkbox is required.
    - Export report ZIP with and without original archive.
 6. Track each validation run in:
   - `docs/ANDROID-VALIDATION-MATRIX.md`
@@ -243,7 +257,7 @@ Steps:
 
 ## Next build-phase tasks
 
-1. Expand emulator validation to document-picker navigation, implicit share/open resolution, unsupported input, cancellation/resume, rotation/background, and export failures. Explicit ZIP intent intake, consent, completed-case recreation, and both export modes now pass; physical-device/OEM checks remain pending.
+1. Complete physical-device/OEM and remaining fault-injection validation. Current API 36 workflow tests pass; checkpoint resume is not required for this version.
 2. Complete upstream parity and OEM guidance validation, then build/sign a release APK and record its hash and validation evidence.
 
 Keep actual device evidence on the phone. Do not copy diagnostic archives, extracted contents, evidence containers, or case exports to the Mac for debugging without explicit permission. Use synthetic fixtures and non-content timing/progress information.

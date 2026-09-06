@@ -51,7 +51,7 @@ data class Finding(
 
 data class Report(
     val schemaVersion: Int = 1,
-    val engineVersion: String = "0.3.0-android-native",
+    var engineVersion: String = "0.4.0-android-hardened",
     val platform: String = "android",
     val caseID: String,
     val createdAt: Long = System.currentTimeMillis(),
