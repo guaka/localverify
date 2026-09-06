@@ -381,7 +381,7 @@ struct AboutView: View {
                     }
                     .font(.title2.bold())
                     Text("Private, on-device diagnostic verification for investigators.")
-                    LabeledContent("Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0")
+                    LabeledContent("Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0-20260906-0940")
                 }
                 Section("Privacy") {
                     Label("Analysis stays on this device", systemImage: "iphone")
