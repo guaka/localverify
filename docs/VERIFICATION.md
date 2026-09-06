@@ -57,3 +57,11 @@ Before investigator deployment, complete and record:
 - Registered-device signing/provisioning and source delivery.
 
 No real-world detection effectiveness is claimed before this gate. Unknown formats are reported as skipped, never counted as checked. Android has its own equivalent gate in ANDROID.md.
+
+
+### Hardening regression checks — 2026-09-06
+
+- Swift synthetic suite: 46 tests passed with no failures after parser/indicator budgets, partial finding retention, bounded local reads, and integrity rechecking. New adversarial cases cover deep JSON (including an IPS body), excessive lines/bytes, dense-match limits with repeated analysis, neutral progress, and final checkpoint write failure.
+- iPhone 17 Pro / iOS 26.5 simulator: app build succeeded; two targeted UI tests passed for explicit Cases review/copy/filter behavior and the neutral progress panel. The privacy shield is included in this build. Physical-device background snapshots, locked storage, and capture behavior still require validation.
+- Offline source policy passed. No actual phone diagnostics, extracted evidence, case containers, or exports were transferred.
+- This is software hardening evidence, not real-world spyware detection validation. Android has separate current results in [ANDROID-VALIDATION-MATRIX.md](ANDROID-VALIDATION-MATRIX.md).

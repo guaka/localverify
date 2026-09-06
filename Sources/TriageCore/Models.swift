@@ -17,6 +17,8 @@ public struct IndicatorSet: Codable {
     public var byteCount: Int? = nil
     public static let demo = IndicatorSet(version: "demo-1 — NOT threat intelligence", indicators: [.init(id: "demo-domain", kind: "domain-name:value", value: "triage-test.invalid")], unsupported: [])
     public static func parse(_ data: Data) throws -> IndicatorSet {
+        guard data.count <= InputLimits.indicatorBytes else { throw TriageError.invalid("Indicator file exceeds 5 MiB") }
+        try InputLimits.json(data)
         let root = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         guard let objects = root?["objects"] as? [[String: Any]], root?["type"] as? String == "bundle" else { throw TriageError.invalid("Expected a STIX2 bundle") }
         let regex = try NSRegularExpression(pattern: "^\\s*\\[\\s*([a-z-]+:[a-z]+)\\s*=\\s*'([^'\\\\]+)'\\s*\\]\\s*$")
@@ -25,6 +27,7 @@ public struct IndicatorSet: Codable {
         for item in objects where item["type"] as? String == "indicator" {
             let id = item["id"] as? String ?? "unnamed"
             let pattern = item["pattern"] as? String ?? ""
+            guard id.utf8.count <= 1024, pattern.utf8.count <= 8192 else { throw TriageError.invalid("Indicator metadata limit reached") }
             guard item["revoked"] as? Bool != true else { skipped.append("\(id): revoked"); continue }
             guard item["pattern_type"] == nil || item["pattern_type"] as? String == "stix",
                   let match = regex.firstMatch(in: pattern, range: NSRange(pattern.startIndex..., in: pattern)),
@@ -59,7 +62,7 @@ public struct Finding: Codable, Identifiable {
 }
 public struct Report: Codable {
     public var schemaVersion = 1
-    public var engineVersion = "0.1.0-experimental"
+    public var engineVersion = "0.2.0-hardened"
     public var platform = "ios"
     public var caseID: String
     public var createdAt = Date()

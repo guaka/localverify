@@ -8,6 +8,7 @@ struct LocalVerifyApp: App {
         WindowGroup {
             ContentView(model: model)
                 .tint(Color("AccentColor"))
+                .background(PrivacyShield())
                 .onAppear {
                     model.load()
                     #if DEBUG && targetEnvironment(simulator)
@@ -41,7 +42,7 @@ struct LocalVerifyApp: App {
             let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             try Self.protect(documents)
             try Self.protect(documents.appendingPathComponent("Imports", isDirectory: true))
-            let cached = try? JSONDecoder().decode(IndicatorSet.self, from: Data(contentsOf: indicatorCache))
+            let cached = try? JSONDecoder().decode(IndicatorSet.self, from: InputLimits.read(indicatorCache, maximum: 8 * 1024 * 1024))
             let bundled = try ThreatUpdates.bundled(in: .main)
             campaignMetadata = Dictionary(bundled.indicators.map { ($0.id + "\u{0}" + $0.value, $0.campaigns ?? []) }, uniquingKeysWith: { first, _ in first })
             indicators = ThreatUpdates.preferredInstalledSet(cached: cached, bundled: bundled)
@@ -75,7 +76,7 @@ struct LocalVerifyApp: App {
     func configureSyntheticUITest() {
         if ProcessInfo.processInfo.arguments.contains("--synthetic-progress") {
             busy = true; canCancel = true; activityTitle = "Analyzing diagnostics"
-            progress = "Checking definitions 1240/2336 · synthetic-diagnostic.log · 1 files checked · 0 leads"
+            progress = "Checking definitions 1240/2336 · 1 file checked"
         }
         if ProcessInfo.processInfo.arguments.contains("--synthetic-case") {
             var report = Report(caseID: "synthetic-ui-case", indicators: .demo)
@@ -90,12 +91,17 @@ struct LocalVerifyApp: App {
                 Finding(id: "synthetic-darksword", rule: "synthetic-two", value: "darksword-synthetic.invalid", source: "synthetic.log", record: "line 2", matchType: "raw-text", explanation: "Synthetic UI fixture", excerpt: "Synthetic second payload", campaigns: ["DarkSword"])
             ]
             reports = [report]
-            showCompletedCase(report.caseID)
+            message = "Analysis stopped or finished. Open Cases to review the result."
         }
     }
     #endif
     func load() {
-        reports = ((try? FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)) ?? []).compactMap { try? JSONDecoder().decode(Report.self, from: Data(contentsOf: $0.appendingPathComponent("checkpoint.json"))) }.sorted { $0.createdAt > $1.createdAt }
+        reports = ((try? FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)) ?? []).compactMap { directory -> Report? in
+            guard let report = try? JSONDecoder().decode(Report.self, from: InputLimits.read(directory.appendingPathComponent("checkpoint.json"), maximum: 64 * 1024 * 1024)),
+                  report.schemaVersion == 1, report.caseID == directory.lastPathComponent,
+                  !report.caseID.contains("/"), !report.caseID.contains("..") else { return nil }
+            return report
+        }.sorted { $0.createdAt > $1.createdAt }
         loadInbox()
     }
     func loadInbox() {
@@ -113,7 +119,7 @@ struct LocalVerifyApp: App {
             let access = url.startAccessingSecurityScopedResource(); defer { if access { url.stopAccessingSecurityScopedResource() } }
             let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
             guard size <= 5 * 1024 * 1024 else { throw TriageError.invalid("Indicator file exceeds 5 MiB") }
-            return try IndicatorSet.parse(Data(contentsOf: url))
+            return try IndicatorSet.parse(InputLimits.read(url, maximum: InputLimits.indicatorBytes))
         }
         job = Task {
             do {
@@ -161,7 +167,7 @@ struct LocalVerifyApp: App {
         let dir = folder(report.caseID)
         let worker = Task.detached(priority: .userInitiated) { [weak self] in
             let setURL = dir.appendingPathComponent("indicators.json")
-            let set = try JSONDecoder().decode(IndicatorSet.self, from: Data(contentsOf: setURL))
+            let set = try JSONDecoder().decode(IndicatorSet.self, from: InputLimits.read(setURL, maximum: 8 * 1024 * 1024))
             guard try Archive.hash(setURL) == report.indicatorSHA256 else { throw TriageError.invalid("Case indicator set changed") }
             return try Analyzer.analyze(archive: dir.appendingPathComponent("original.tar.gz"), indicators: set, previous: report, progress: { detail in
                 Task { @MainActor [weak self] in self?.progress = detail }
@@ -173,7 +179,7 @@ struct LocalVerifyApp: App {
             do { _ = try await withTaskCancellationHandler(operation: { try await worker.value }, onCancel: { worker.cancel() }) }
             catch { message = error.localizedDescription }
             busy = false; canCancel = false; load()
-            showCompletedCase(report.caseID)
+            message = "Analysis stopped or finished. Open Cases to review the result."
         }
     }
     func showCompletedCase(_ id: String) {
@@ -317,7 +323,7 @@ struct IndicatorsView: View {
                 }
                 Section("Manage indicators") {
                     Button("Import threat indicators", systemImage: "doc.badge.plus") { importing = true }.disabled(model.busy).accessibilityIdentifier("importIndicators")
-                    Text("Advanced: import a STIX2 JSON file supplied by an investigator.").font(.caption).foregroundStyle(.secondary)
+                    Text("Advanced: import a STIX2 JSON file supplied by an investigator. Manual imports are unverified; the app does not authenticate their publisher.").font(.caption).foregroundStyle(.secondary)
                     Button("Use bundled indicators", systemImage: "shippingbox") { model.useBundledIndicators() }.disabled(model.busy)
                 }
                 if !model.indicators.unsupported.isEmpty {
@@ -348,9 +354,9 @@ struct CasesView: View {
                         NavigationLink(value: report.caseID) {
                             Label {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(report.status)
+                                    Text(report.completed && report.errors.isEmpty ? "Ready to review" : "Analysis incomplete")
                                     Text(report.createdAt.formatted()).font(.subheadline).foregroundStyle(.secondary)
-                                    Text("\(report.findings.count) matches · \(report.analyzed.count) files").font(.caption).foregroundStyle(.secondary)
+                                    Text("\(report.analyzed.count) files checked · Open to review").font(.caption).foregroundStyle(.secondary)
                                 }
                             } icon: { Image(systemName: "doc.text.magnifyingglass") }
                         }

@@ -8,8 +8,12 @@ final class ImportPickerTests: XCTestCase {
         }
     }
 
-    func testCaseCopiesFiltersAndAutomaticNavigation() {
+    func testCaseCopiesFiltersAfterExplicitReview() {
         let app = XCUIApplication(); app.launchArguments += ["--synthetic-case"]; app.launch()
+        app.tabBars.buttons["Cases"].tap()
+        XCTAssertTrue(app.navigationBars["Cases"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["pegasus-synthetic.invalid"].exists)
+        app.staticTexts["Ready to review"].tap()
         XCTAssertTrue(app.navigationBars["Case"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["sysdiagnose_synthetic_ui.tar.gz"].exists)
         let copyReport = app.buttons["copyCaseReport"]
@@ -33,6 +37,10 @@ final class ImportPickerTests: XCTestCase {
 
     func testSyntheticCasePreparesZipForSharing() {
         let app = XCUIApplication(); app.launchArguments += ["--synthetic-case"]; app.launch()
+        app.tabBars.buttons["Cases"].tap()
+        XCTAssertTrue(app.navigationBars["Cases"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["pegasus-synthetic.invalid"].exists)
+        app.staticTexts["Ready to review"].tap()
         XCTAssertTrue(app.navigationBars["Case"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["sysdiagnose_synthetic_ui.tar.gz"].exists)
 
@@ -51,6 +59,10 @@ final class ImportPickerTests: XCTestCase {
 
     func testSyntheticCaseCampaignFilterShowsMatchedPayloads() {
         let app = XCUIApplication(); app.launchArguments += ["--synthetic-case"]; app.launch()
+        app.tabBars.buttons["Cases"].tap()
+        XCTAssertTrue(app.navigationBars["Cases"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["pegasus-synthetic.invalid"].exists)
+        app.staticTexts["Ready to review"].tap()
         XCTAssertTrue(app.navigationBars["Case"].waitForExistence(timeout: 5))
 
         let filter = app.buttons["campaignFilter"]

@@ -17,3 +17,6 @@ Choosing an input from iCloud Drive may download it via Apple's file provider; L
 Deleting a case removes its local original, checkpoints, indicator snapshot, and prepared export. It does not remove the source file in Settings/Files or any previously shared copies. Deletion is filesystem removal, not a forensic secure-erase guarantee.
 
 Reviewed 2026-09-06: the indicator network client has been removed. No upload APIs or third-party telemetry dependencies are included. This describes the app's source; it is not an operating-system network block or a full external security audit.
+
+
+Hardening update — 2026-09-06: iOS progress no longer includes live match counts or evidence filenames, and completion leaves review to the user's Cases action. The app covers its window synchronously on foreground exit to reduce app-switcher exposure. This is not a universal screenshot block or protection against privileged screen capture. Generated HTML reports prohibit remote resources and scripts through a content security policy in addition to escaping evidence text.
