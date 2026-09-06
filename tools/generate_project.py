@@ -2,6 +2,8 @@
 from pathlib import Path
 import json
 import argparse
+import subprocess
+import sys
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--local-only', action='store_true', help='Build without App Groups or share extension')
@@ -9,6 +11,7 @@ parser.add_argument('--ui-tests', action='store_true', help='Include simulator U
 args = parser.parse_args()
 
 root = Path(__file__).resolve().parents[1]
+subprocess.run([sys.executable, str(root / 'tools/check_offline.py')], check=True)
 objects = {}
 def add(key, isa, **values):
     objects[key] = dict(isa=isa, **values)
@@ -77,6 +80,26 @@ if args.ui_tests:
     add('UICONFIG', 'XCConfigurationList', buildConfigurations=['UIDebug', 'UIRelease'], defaultConfigurationIsVisible=0, defaultConfigurationName='Debug')
     add('UITEST', 'PBXNativeTarget', name='LocalVerifyUITests', productName='LocalVerifyUITests', productReference='UIPRODUCT', productType='com.apple.product-type.bundle.ui-testing', buildConfigurationList='UICONFIG', buildPhases=['UISOURCES'], dependencies=['UIDEPENDENCY'], fileSystemSynchronizedGroups=['UIFILES'])
     objects['PROJECT']['targets'].append('UITEST')
+# Run on every build, including standalone share-extension builds. Explicit
+# sandbox inputs cover all directories and source files. Regenerate after adding
+# files; an unreadable input fails the check instead of being silently skipped.
+offline_inputs = ['$(SRCROOT)/' + str(path.relative_to(root))
+                  for directory in ['Sources', 'iOS/App', 'iOS/Share']
+                  for path in [root / directory, *sorted((root / directory).rglob('*'))]
+                  if path.is_dir() or path.suffix in {'.swift', '.h', '.c', '.m', '.mm', '.cpp'}]
+for key in ['APP'] + ([] if args.local_only else ['SHARE']):
+    phase = add(key+'OFFLINE', 'PBXShellScriptBuildPhase', buildActionMask=2147483647,
+                files=[], inputPaths=['$(SRCROOT)/tools/check_offline.py',
+                    '$(SRCROOT)/Sources', '$(SRCROOT)/iOS/App', '$(SRCROOT)/iOS/Share',
+                    '$(SRCROOT)/iOS/App-Info.plist', '$(SRCROOT)/iOS/Share-Info.plist',
+                    '$(SRCROOT)/Package.swift', '$(SRCROOT)/LocalVerify.xcodeproj',
+                    '$(SRCROOT)/LocalVerifyLocal.xcodeproj',
+                    '$(SRCROOT)/LocalVerify.xcodeproj/project.pbxproj',
+                    '$(SRCROOT)/LocalVerifyLocal.xcodeproj/project.pbxproj'] + offline_inputs, outputPaths=[],
+                shellPath='/bin/sh', shellScript='python3 "$SRCROOT/tools/check_offline.py"',
+                name='Check offline source policy', alwaysOutOfDate=1,
+                runOnlyForDeploymentPostprocessing=0)
+    objects[key]['buildPhases'].insert(0, phase)
 ids = {key: f'{i:024X}' for i, key in enumerate(objects, 1)}
 def refs(value):
     if isinstance(value, list): return [refs(v) for v in value]

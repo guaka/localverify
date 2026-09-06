@@ -386,11 +386,11 @@ struct AboutView: View {
                 }
                 Section("Indicator sources") {
                     Text("Amnesty International — Pegasus and Predator/Cytrox. Unmodified source bundles, licensed CC BY 2.0. The app uses only supported patterns.")
-                    Link("Source and attribution", destination: URL(string: "https://github.com/AmnestyTech/investigations")!)
-                    Link("CC BY 2.0 license", destination: URL(string: "https://creativecommons.org/licenses/by/2.0/")!)
+                    Text(verbatim: "Source: https://github.com/AmnestyTech/investigations").textSelection(.enabled)
+                    Text(verbatim: "License: https://creativecommons.org/licenses/by/2.0/").textSelection(.enabled)
                     Text("MVT contributors — expanded Predator, Coruna and DarkSword collections, compiled from published research. MIT license; source references and license text accompany the bundled files.")
-                    Link("MVT indicator sources and license", destination: URL(string: "https://github.com/mvt-project/mvt-indicators")!)
-                    Text("Optional updates download public definitions only. No diagnostic uploads or telemetry.").font(.footnote)
+                    Text(verbatim: "Source and license: https://github.com/mvt-project/mvt-indicators").textSelection(.enabled)
+                    Text("Definitions are bundled or imported from a local file. References are shown as text; Local Verify does not open websites.").font(.footnote)
                 }
                 Section("Legal") {
                     NavigationLink {
@@ -483,7 +483,7 @@ struct CaseView: View {
                                 Text(finding.reviewGuidance).font(.footnote)
                                 if finding.isPegasusBridgeheadReference {
                                     Text("Amnesty documented bh in historical Pegasus infections and suggested it may mean BridgeHead. A text occurrence here does not establish that the component executed.").font(.footnote)
-                                    Link("Amnesty: Pegasus forensic methodology", destination: URL(string: "https://www.amnesty.org/en/latest/research/2021/07/forensic-methodology-report-how-to-catch-nso-groups-pegasus/")!)
+                                    Text(verbatim: "Amnesty: Pegasus forensic methodology\nhttps://www.amnesty.org/en/latest/research/2021/07/forensic-methodology-report-how-to-catch-nso-groups-pegasus/").font(.footnote).textSelection(.enabled)
                                 }
                             }
                             Text(finding.excerpt).font(.system(.caption, design: .monospaced)).textSelection(.enabled)

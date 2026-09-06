@@ -64,7 +64,7 @@ struct CollectionGuide: View {
             Section("If you cannot find the file") {
                 Text("Wait a few more minutes and reopen Analytics Data. Look for sysdiagnose_ with today's date. If it is still absent, repeat the short button press once. Device and iOS versions can differ.")
                 Text("If the Local Verify folder is missing in Files, open Local Verify once, return to Files → Browse, and reopen On My iPhone.")
-                Link("Apple's diagnostic instructions (opens browser)", destination: URL(string: "https://developer.apple.com/feedback-assistant/profiles-and-logs/?name=sysdiagnose")!)
+                Text(verbatim: "Apple's diagnostic reference\nhttps://developer.apple.com/feedback-assistant/profiles-and-logs/?name=sysdiagnose").font(.footnote).textSelection(.enabled)
             }
             Section("After importing") {
                 Text("Local Verify keeps its own protected case copy. The file you saved in Files remains separate; you can remove it there when you no longer need it. Deleting a Local Verify case does not delete the original in Settings or Files.")
