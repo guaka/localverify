@@ -1,6 +1,6 @@
 # Third-party notices
 
-Project-owned source is licensed under the unchanged MVT License 1.1 in LICENSE. No upstream MVT implementation files have been copied into this initial prototype; MVT's documented forensic workflow informs the design.
+Project-owned source is licensed under the GNU Affero General Public License, version 3 or (at your option) any later version (SPDX: AGPL-3.0-or-later); see LICENSE. Third-party components and datasets retain their respective licenses below. No upstream MVT implementation files have been copied into this initial prototype; MVT's documented forensic workflow informs the design.
 
 Apple SDK frameworks (Foundation, SwiftUI, UIKit, CryptoKit) and the system zlib are linked through their platform-provided interfaces. No third-party binaries are bundled. The demonstration `.invalid` domain used by tests is synthetic. Imported indicator sets remain subject to their providers' terms.
 

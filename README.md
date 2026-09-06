@@ -90,3 +90,13 @@ Limits include 8 GiB expanded input, 100,000 archive entries, 16 MiB per parsed 
 STIX matching is intentionally limited to single equality expressions for domains, URLs, processes, and file paths/names. Matching is case-insensitive for domains and exact for other values. No malicious-domain lookups or network requests are performed.
 
 See the detailed [verification](docs/VERIFICATION.md), [report contract](docs/REPORT.md), [privacy](docs/PRIVACY.md), and [indicator update](docs/INDICATOR_UPDATES.md) documentation for more detail.
+
+## License
+
+Local Verify's project-owned source is licensed under the GNU Affero General Public
+License, version 3 or (at your option) any later version (`AGPL-3.0-or-later`).
+See [LICENSE](LICENSE) for the full terms. The software is provided without warranty.
+
+Third-party components and indicator datasets retain their own licenses and notices;
+see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Distributions must provide
+recipients access to the corresponding source as required by the AGPL.

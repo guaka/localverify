@@ -399,10 +399,10 @@ struct AboutView: View {
                         ScrollView {
                             Text((Bundle.main.url(forResource: "LICENSE", withExtension: nil).flatMap { try? String(contentsOf: $0) }) ?? "See LICENSE in the supplied source distribution.")
                                 .font(.body).textSelection(.enabled).padding()
-                        }.navigationTitle("MVT License 1.1").navigationBarTitleDisplayMode(.inline)
+                        }.navigationTitle("GNU AGPL v3").navigationBarTitleDisplayMode(.inline)
                     } label: { Label("License", systemImage: "doc.text") }
                     .accessibilityIdentifier("license")
-                    Text("MVT License 1.1. Source and third-party notices accompany private builds.").font(.footnote).foregroundStyle(.secondary)
+                    Text("GNU AGPL v3 or later. Source and third-party notices accompany private builds.").font(.footnote).foregroundStyle(.secondary)
                 }
             }.navigationTitle("About")
         }

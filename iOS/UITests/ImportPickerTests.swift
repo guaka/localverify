@@ -107,7 +107,7 @@ final class ImportPickerTests: XCTestCase {
         let license = app.buttons["license"]
         for _ in 0..<6 where !license.isHittable { app.swipeUp() }
         license.tap()
-        XCTAssertTrue(app.navigationBars["MVT License 1.1"].exists)
+        XCTAssertTrue(app.navigationBars["GNU AGPL v3"].exists)
         app.tabBars.buttons["Indicators"].tap()
         let size = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "2.33 MB")).firstMatch
         for _ in 0..<6 where !size.isHittable { app.swipeUp() }
