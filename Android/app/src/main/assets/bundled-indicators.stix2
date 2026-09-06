@@ -1,0 +1,37 @@
+{
+  "type": "bundle",
+  "id": "bundle--local-verify-android-demo",
+  "objects": [
+    {
+      "type": "indicator",
+      "id": "indicator--android-demo-domain",
+      "created": "2026-09-01T00:00:00Z",
+      "modified": "2026-09-01T00:00:00Z",
+      "pattern_type": "stix",
+      "pattern": "[domain-name:value = 'triage-test.invalid']",
+      "name": "Demo local triage indicator",
+      "labels": ["anonymized"],
+      "x_mvt_campaigns": ["Demo"]
+    },
+    {
+      "type": "indicator",
+      "id": "indicator--android-demo-url",
+      "created": "2026-09-01T00:00:00Z",
+      "modified": "2026-09-01T00:00:00Z",
+      "pattern_type": "stix",
+      "pattern": "[url:value = 'https://triage-demo.invalid/example']",
+      "name": "Demo local triage URL indicator",
+      "x_mvt_campaigns": ["Demo"]
+    },
+    {
+      "type": "indicator",
+      "id": "indicator--android-demo-process",
+      "created": "2026-09-01T00:00:00Z",
+      "modified": "2026-09-01T00:00:00Z",
+      "pattern_type": "stix",
+      "pattern": "[process:name = 'triage-demo']",
+      "name": "Demo process indicator",
+      "x_mvt_campaigns": ["Demo"]
+    }
+  ]
+}

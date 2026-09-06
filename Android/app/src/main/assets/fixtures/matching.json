@@ -1,0 +1,11 @@
+[
+  {"text":"connected triage-test.invalid", "indicatorKind":"domain-name:value", "indicatorValue":"triage-test.invalid", "expected":1, "matchType":"raw-text"},
+  {"text":"triage-test.invalid.example", "indicatorKind":"domain-name:value", "indicatorValue":"triage-test.invalid", "expected":0, "matchType":null},
+  {"text":"safe-triage-test.invalid", "indicatorKind":"domain-name:value", "indicatorValue":"triage-test.invalid", "expected":0, "matchType":null},
+  {"text":"{\"hostname\":\"TRIAGE-TEST.INVALID\"}", "indicatorKind":"domain-name:value", "indicatorValue":"triage-test.invalid", "expected":1, "matchType":"structured"},
+  {"text":"{\"processname\":\"triage-proc\"}", "indicatorKind":"process:name", "indicatorValue":"triage-proc", "expected":1, "matchType":"structured"},
+  {"text":"{\"process_name\":\"triage-proc\"}", "indicatorKind":"process:name", "indicatorValue":"triage-proc", "expected":1, "matchType":"structured"},
+  {"text":"{\"path\":\"/data/app/triage-proc.dex\"}", "indicatorKind":"file:path", "indicatorValue":"/data/app/triage-proc.dex", "expected":1, "matchType":"structured"},
+  {"text":"download from https://triage-test.invalid/report?id=99", "indicatorKind":"url:value", "indicatorValue":"https://triage-test.invalid/report?id=99", "expected":1, "matchType":"raw-text"},
+  {"text":"{\"filename\":\"triage-test.invalid\"}", "indicatorKind":"file:name", "indicatorValue":"triage-test.invalid", "expected":1, "matchType":"structured"}
+]
