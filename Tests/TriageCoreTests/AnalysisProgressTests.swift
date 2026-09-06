@@ -121,4 +121,58 @@ final class AnalysisProgressTests: XCTestCase {
         XCTAssertEqual(report.status, "Unverified text matches")
         XCTAssertEqual(report.findings.count, 1)
     }
+
+    func testScanReportsProgressWhenRequested() throws {
+        let indicators = [Indicator(id: "p", kind: "process:name", value: "badproc"), Indicator(id: "d", kind: "domain-name:value", value: "example.local")]
+        var stages: [String] = []
+        let findings = try Analyzer.scan(
+            "example.local\nbadproc\nexample.local",
+            source: "progress.log",
+            indicators: indicators,
+            progress: { stages.append($0) }
+        )
+        XCTAssertEqual(findings.count, 3)
+        XCTAssertFalse(stages.isEmpty)
+    }
+
+    func testAnalyzeSkipsAlreadyAnalyzedEntriesWithProgressCallback() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try Data("badproc".utf8).write(to: root.appendingPathComponent("fixture.log"))
+        let archive = root.appendingPathComponent("fixture.tar.gz")
+        let tar = Process()
+        tar.executableURL = URL(fileURLWithPath: "/usr/bin/tar")
+        tar.arguments = ["-czf", archive.path, "-C", root.path, "fixture.log"]
+        try tar.run()
+        tar.waitUntilExit()
+        XCTAssertEqual(tar.terminationStatus, 0)
+
+        let indicators = IndicatorSet(version: "resume-test", indicators: [Indicator(id: "p", kind: "process:name", value: "badproc")], unsupported: [])
+        var base = try Analyzer.analyze(
+            archive: archive,
+            indicators: indicators,
+            previous: Report(caseID: "analyzed", indicators: indicators),
+            progress: { _ in }
+        ) { _ in }
+        XCTAssertEqual(base.analyzed, ["fixture.log"])
+        XCTAssertEqual(base.findings.count, 1)
+        // Model an interruption after this entry was checkpointed.
+        base.completed = false
+        var updates: [String] = []
+        var checkpointCount = 0
+        let resumed = try Analyzer.analyze(
+            archive: archive,
+            indicators: indicators,
+            previous: base,
+            progress: { updates.append($0) },
+            checkpoint: { _ in checkpointCount += 1 }
+        )
+        XCTAssertEqual(resumed.analyzed, base.analyzed)
+        XCTAssertEqual(resumed.findings.map(\.id), base.findings.map(\.id))
+        XCTAssertTrue(resumed.completed)
+        XCTAssertTrue(resumed.errors.isEmpty)
+        XCTAssertEqual(checkpointCount, 2, "Only the initial and final checkpoints should be written")
+        XCTAssertTrue(updates.contains { $0.contains("Reading archive") })
+    }
 }

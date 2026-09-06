@@ -1,4 +1,5 @@
 .build/
+.tmp/
 build/
 build-device/
 DerivedData/

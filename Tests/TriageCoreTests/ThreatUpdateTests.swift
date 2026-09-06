@@ -146,4 +146,15 @@ final class ThreatUpdateTests: XCTestCase {
         XCTAssertEqual(set.unsupported, ["indicator--unit-dropped: valid_until is not supported"])
         XCTAssertNotNil(set.latestIndicatorDate)
     }
+
+    func testCombinePrefersSupportedIndicatorsAndCapturesUnsupportedRows() throws {
+        let supportedWithUnsupported = Data(#"{"type":"bundle","id":"local","objects":[{"type":"indicator","id":"good","pattern_type":"stix","pattern":"[process:name = 'goodproc']","created":"2024-01-01T00:00:00Z","modified":"2024-01-01T00:00:00Z"},{"type":"indicator","id":"skip","pattern_type":"regex","pattern":"[process:name = 'skip']","created":"2024-01-01T00:00:00Z","modified":"2024-01-01T00:00:00Z"}]}"#.utf8)
+        var basePayloads = try payloads
+        basePayloads[0] = supportedWithUnsupported
+        let set = try ThreatUpdates.combine(basePayloads, checkedAt: nil)
+        XCTAssertFalse(set.unsupported.isEmpty)
+        XCTAssertTrue(set.unsupported.contains(where: { $0.hasPrefix("\(ThreatUpdates.feeds[0].name): skip: unsupported pattern") }))
+        XCTAssertTrue(set.indicators.contains { $0.id == "good" && $0.value == "goodproc" })
+        XCTAssertFalse(set.indicators.contains { $0.id == "skip" })
+    }
 }
