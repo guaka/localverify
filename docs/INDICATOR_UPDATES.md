@@ -23,3 +23,7 @@ The iOS app does not download indicators. Users can import a local STIX file or 
 The snapshot contains 2,336 unique supported indicators and 55 explicitly skipped definitions. Unsupported hashes/IPs and other patterns are not counted as checked. The newest embedded indicator timestamp is 2026-03-30 00:00 UTC; the older Predator bundle still uses a 2023 timestamp, so this is not a statement that all feeds are equally recent. The developer manifest pins each repository and includes upstream research references and full license notices.
 
 Definitions dated is the newest indicator modified/created timestamp in the active bundles. Last checked is the retrieval time, not the age of definitions. Times display as yyyy-MM-dd HH:mm in device local time. MB uses decimal bytes / 1,000,000.
+
+## External research references
+
+[Cryptware Apps — Malware-Database](https://github.com/cryptwareapps/Malware-Database) is described by its maintainers as a collection of malware samples and source code across multiple platforms. It is listed here for background research when evaluating future indicator sources and synthetic test scenarios. Local Verify does not bundle or fetch its contents; this reference adds no detection coverage. Any future integration would require a separate OpenSpec change and review of provenance, licensing and compatibility with the supported indicator contract.
