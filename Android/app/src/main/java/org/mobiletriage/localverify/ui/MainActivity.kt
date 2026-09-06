@@ -28,7 +28,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.Icon
 import org.mobiletriage.localverify.R
@@ -490,7 +489,6 @@ private fun AppScreen(
     var coverageExpanded by rememberSaveable(report?.caseID) { mutableStateOf(false) }
     val panes = listOf("Scan", "Cases", "Indicators", "About")
     val paneIcons = listOf(R.drawable.ic_scan, R.drawable.ic_cases, R.drawable.ic_indicators, R.drawable.ic_about)
-    val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
     val appVersion = remember(context) {
         context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "Unknown"
@@ -597,14 +595,9 @@ private fun AppScreen(
                 }
                 "About" -> {
                     item { InfoCard("Local Verify", "Private, on-device diagnostic verification for investigators.\n\nVersion $appVersion") }
-                    item {
-                        TextButton(onClick = { uriHandler.openUri("https://github.com/guaka/LocalVerify") }) {
-                            Text("View Local Verify on GitHub")
-                        }
-                    }
                     item { InfoCard("Privacy", "Analysis stays on this device.\n\nNo uploads or telemetry. Case files are protected and excluded from automatic backup. Data leaves Local Verify only when you choose to share an export.\n\nCopies you saved in Files or previously shared remain separate from a Local Verify case.") }
                     item { InfoCard("Experimental coverage", "Findings are leads for review, not proof of compromise. No matches does not establish that a device is uncompromised.\n\nOnly supported patterns in the installed definitions are checked; unsupported patterns are listed in Indicators.") }
-                    item { InfoCard("Indicator sources", "Amnesty International - Pegasus and Predator/Cytrox. Unmodified source bundles, licensed CC BY 2.0. The app uses only supported patterns.\n\nSource: https://github.com/AmnestyTech/investigations\nLicense: https://creativecommons.org/licenses/by/2.0/\n\nMVT contributors - expanded Predator, Coruna and DarkSword collections, compiled from published research. MIT license; source references and license text accompany the bundled files.\n\nSource and license: https://github.com/mvt-project/mvt-indicators\n\nIndicator references are shown as text. The GitHub button opens the project in your browser.") }
+                    item { InfoCard("Indicator sources", "Amnesty International - Pegasus and Predator/Cytrox. Unmodified source bundles, licensed CC BY 2.0. The app uses only supported patterns.\n\nSource: https://github.com/AmnestyTech/investigations\nLicense: https://creativecommons.org/licenses/by/2.0/\n\nMVT contributors - expanded Predator, Coruna and DarkSword collections, compiled from published research. MIT license; source references and license text accompany the bundled files.\n\nSource and license: https://github.com/mvt-project/mvt-indicators\n\nReferences are shown as text; Local Verify does not open websites.") }
                     item { InfoCard("Legal", "GNU AGPL v3 or later. Source and third-party notices accompany private builds.") }
                 }
             }
