@@ -148,6 +148,7 @@ Legend: `✅` implemented, `🟠` implemented but not validated on physical devi
 ### Verified local execution status (2026-09-06)
 
 - `:app:testDebugUnitTest :app:assembleDebug --console=plain`: **BUILD SUCCESSFUL**, exit 0.
+- Follow-up: `./scripts/run-android-plan.sh` passed using the included checksum-pinned Gradle 8.11.1 wrapper with no standalone Gradle on PATH. Preflight passed; build and test outputs were up-to-date from the successful run below.
 - Eight JVM tests passed across five suites, with zero failures, errors, or skips. `MatchingParityTest` exercises nine synthetic fixture rows.
 - Suites: `ArchivePolicyTest` (2), `ArchiveWalkerTest` (3), `IndicatorParserParityTest` (1), `MatchingParityTest` (1), `TriageAnalyzerTest` (1).
 - Debug-signed APK: `Android/app/build/outputs/apk/debug/localverify-debug.apk`; the filename is configured for subsequent debug builds.
@@ -168,11 +169,11 @@ Reproduce the verified command from the repository root on this Mac:
 cd Android
 export JAVA_HOME='/Applications/Android Studio.app/Contents/jbr/Contents/Home'
 export ANDROID_HOME="$HOME/Library/Android/sdk"
-export PATH="$JAVA_HOME/bin:$HOME/.gradle/wrapper/dists/gradle-8.11.1-bin/bpt9gzteqjrbo1mjrsomdt32c/gradle-8.11.1/bin:$PATH"
-gradle :app:testDebugUnitTest :app:assembleDebug --console=plain
+export PATH="$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$PATH"
+./scripts/run-android-plan.sh
 ```
 
-The run invoked that cached Gradle executable by absolute path. Its cache directory is machine-specific; a pinned repository wrapper remains a follow-up. The helper-script preflight and full plan runner have not been rerun with this configured environment.
+The original successful run invoked cached Gradle by absolute path. The repository now includes `gradlew`, `gradlew.bat`, and the wrapper JAR/properties under `Android/gradle/wrapper/`. Gradle 8.11.1 is pinned with its published distribution SHA-256 (`f397b287023acdba1e9f6fc5ea72d22dd63669d59ed4a289a29b1a76eee151c6`). The full plan runner and helper-script preflight passed with the wrapper and no standalone Gradle on PATH. ADB 1.0.41 (37.0.0-14910828) was detected; device availability remains unverified.
 
 `./scripts/check-android-env.sh` is strict for required dependencies and will fail fast when:
 - `gradlew` is absent and no usable local `gradle` binary is on PATH,
@@ -185,7 +186,7 @@ Requirements:
 
 - Android Studio (or local SDK/NDK toolchain)
 - JDK 17+
-- Compatible Gradle 8.x (bootstrap defaults to 8.7) and writeable Android module cache
+- Included Gradle 8.11.1 wrapper and writeable Android module cache; no separate Gradle installation required
 - Kotlin and Android plugin alignment for JDK 17
 
 Steps:
@@ -229,9 +230,8 @@ Steps:
 
 ## Next build-phase tasks
 
-1. Generate and retain a pinned Gradle wrapper, then run the environment preflight and plan runner to validate the portable build path. The existing JVM suite and debug assembly now pass with the verified cached toolchain.
-2. Install `localverify-debug.apk` on an Android 11+ emulator or authorized device and execute intake, cancellation/resume, rotation/background, and export checks using synthetic fixtures.
-3. Complete upstream parity and OEM guidance validation, then build/sign a release APK and record its hash and validation evidence.
+1. Install `localverify-debug.apk` on an Android 11+ emulator or authorized device and execute intake, cancellation/resume, rotation/background, and export checks using synthetic fixtures. Wrapper generation, preflight, and the full build/test plan runner are complete.
+2. Complete upstream parity and OEM guidance validation, then build/sign a release APK and record its hash and validation evidence.
 
 Keep actual device evidence on the phone. Do not copy diagnostic archives, extracted contents, evidence containers, or case exports to the Mac for debugging without explicit permission. Use synthetic fixtures and non-content timing/progress information.
 

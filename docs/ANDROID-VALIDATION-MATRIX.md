@@ -40,6 +40,7 @@ Keep one entry per device and test set:
 - XML reports: `Android/app/build/test-results/testDebugUnitTest/TEST-*.xml`.
 - APK hash above was recorded using `openssl dgst -sha256`; the sandbox blocked the Perl runtime used by `shasum`.
 - Device validation and signed release packaging: not performed.
+- Follow-up tooling run on 2026-09-06: generated the Gradle 8.11.1 wrapper with the published distribution checksum, then ran `./scripts/run-android-plan.sh` successfully with no standalone Gradle on PATH. Preflight verified the wrapper, Java/javac 21.0.4, SDK path, and ADB 1.0.41 (37.0.0-14910828). Debug assembly and unit-test tasks were up-to-date from the passing run; this was a wrapper/workflow validation, not a new test execution.
 
 ---
 
@@ -76,10 +77,10 @@ Keep one entry per device and test set:
 ## Environment and reproducibility notes
 
 - The default PATH did not expose the working Android toolchain. Set `JAVA_HOME`, `ANDROID_HOME`, and PATH as shown in [ANDROID.md](./ANDROID.md#current-environment-note).
-- A repository-local Gradle wrapper has not yet been generated; the successful run used the cached Gradle executable directly.
-- Preflight and full plan runner remain unverified with the configured environment; unit tests and APK assembly are verified.
+- Repository-local Gradle 8.11.1 wrapper generated with distribution checksum `f397b287023acdba1e9f6fc5ea72d22dd63669d59ed4a289a29b1a76eee151c6`; includes Unix/Windows launchers, JAR, and properties.
+- Preflight and full plan runner passed with the configured environment and no standalone Gradle on PATH; unit tests and APK assembly are verified.
 - SDK/cache access restrictions required additional access for the successful runs. Do not describe a permission or PATH failure as proof that the installed tools are absent.
-- Device availability and `adb` access have not been verified in this session.
+- ADB version lookup passed in preflight; connected-device availability and runtime validation remain pending.
 
 `./scripts/check-android-env.sh` enforces required tooling for local build/test:
 - fails when both `gradlew` and local `gradle` are missing,
@@ -91,12 +92,12 @@ Keep one entry per device and test set:
 
 ### 0) Tooling/attestation prereq
 
-- [ ] `Android/` directory contains a usable Gradle runner (`./scripts/gradle-android.sh`)
+- [x] `Android/` directory contains a usable Gradle runner (`./scripts/gradle-android.sh` delegates to pinned `./gradlew`)
 - [x] `Android/scripts/bootstrap-gradle.sh` and `Android/scripts/gradle-android.sh` are available and point to same execution path.
 - [x] JDK 17+ active for Android build tasks (Android Studio OpenJDK 21.0.4)
 - [ ] Android device available for integration checks (when running device validation)
-- [ ] `./scripts/check-android-env.sh` baseline checks pass (`gradle >= 8.7`, `java/javac >= 17`, `gradlew` status; `adb` optional for now)
-- [ ] `./scripts/run-android-plan.sh` executed successfully on branch
+- [x] `./scripts/check-android-env.sh` baseline checks pass (`gradle >= 8.7`, `java/javac >= 17`, `gradlew` status; `adb` optional for now)
+- [x] `./scripts/run-android-plan.sh` executed successfully on branch
 
 ### 1) Intake and capture
 
@@ -135,7 +136,7 @@ Keep one entry per device and test set:
 ### 4) Release packaging
 
 - [x] `:app:assembleDebug` passes; `app/build/outputs/apk/debug/localverify-debug.apk` rebuilt with matching fixes
-- [ ] Helper-script build path verified with configured PATH or repository wrapper
+- [x] Helper-script build path verified with configured PATH and repository wrapper
 - [ ] `./scripts/gradle-android.sh :app:assembleRelease` passes
 - [ ] `./scripts/package-apk.sh app/build/outputs/apk/release/app-release.apk` records SHA-256 for handoff
 - [ ] Keystore/signing flow documented for release artifact
@@ -155,6 +156,5 @@ Keep one entry per device and test set:
 
 ## Next execution order
 
-1. Generate a pinned Gradle wrapper and validate preflight/plan runner execution; the existing JVM tests and debug assembly now pass.
-2. Install the debug APK on an emulator or authorized device and complete tracks 1 and 3 with synthetic fixtures.
-3. Complete upstream/OEM validation and release signing, then record the release artifact hash for handoff.
+1. Install the debug APK on an emulator or authorized device and complete tracks 1 and 3 with synthetic fixtures. Pinned wrapper, preflight, and plan runner validation are complete.
+2. Complete upstream/OEM validation and release signing, then record the release artifact hash for handoff.

@@ -41,9 +41,14 @@ else
   echo "missing"
 fi
 
-echo -n "local gradle CLI: "
-if command -v gradle >/dev/null 2>&1; then
-  gradle --version >/tmp/localverify-gradle.out 2>&1
+echo -n "Gradle runner: "
+if [[ -x ./gradlew ]] || command -v gradle >/dev/null 2>&1; then
+  GRADLE_RUNNER="gradle"
+  if [[ -x ./gradlew ]]; then
+    GRADLE_RUNNER="./gradlew"
+  fi
+  echo "$GRADLE_RUNNER"
+  "$GRADLE_RUNNER" --version >/tmp/localverify-gradle.out 2>&1
   sed -n '1,3p' /tmp/localverify-gradle.out
   GRADLE_VERSION="$(awk '/Gradle / {for (i=1;i<=NF;i++) if($i ~ /^[0-9]+\.[0-9]+(\.[0-9]+)?(-.+)?$/){print $i; exit}}' /tmp/localverify-gradle.out)"
   if ! require_version_ge "Gradle" "$GRADLE_VERSION" "8.7.0"; then

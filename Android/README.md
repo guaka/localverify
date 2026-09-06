@@ -23,14 +23,9 @@ This is a Kotlin/Jetpack Compose native Android implementation started from
 ## Run in Android Studio
 
 1. Open `Android/` as a project.
-2. Install Android Studio/SDK toolchain with Gradle 8.7+ available locally.
-3. Ensure Java 17 is active on PATH.
-   - macOS: `brew install --cask temurin` (or another JDK 17 distribution), then `brew install gradle`
-   - Windows/macOS/Linux: install Java 17 and Gradle 8.7+ via your preferred package manager
-   - Or use Android Studio's bundled/managed Gradle setup.
-4. Bootstrap the Gradle wrapper once (if needed):
-   - `./scripts/bootstrap-gradle.sh`
-   - The script requires Gradle >= 8.7 and will validate wrapper generation inputs.
+2. Install Android Studio and SDK Platform 34 / Build Tools 34.0.0.
+3. Configure a JDK 17+ and SDK path. Android Studio's bundled JDK 21 is verified on this Mac.
+4. Use the included checksum-pinned Gradle 8.11.1 wrapper. No separate Gradle installation is needed; the first run downloads its distribution if it is not cached.
 5. Optional preflight sanity check:
    - `./scripts/check-android-env.sh`
 6. Run the full execution path end-to-end:
@@ -45,6 +40,19 @@ This is a Kotlin/Jetpack Compose native Android implementation started from
      - `./scripts/package-apk.sh app/build/outputs/apk/release/app-release.apk`
 
 ## Notes
+
+From `Android/` on this Mac:
+
+```sh
+export JAVA_HOME='/Applications/Android Studio.app/Contents/jbr/Contents/Home'
+export ANDROID_HOME="$HOME/Library/Android/sdk"
+export PATH="$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$PATH"
+./scripts/run-android-plan.sh
+```
+
+Debug APK: `app/build/outputs/apk/debug/localverify-debug.apk`.
+For direct build and test execution, use `./gradlew :app:assembleDebug :app:testDebugUnitTest`.
+The bootstrap helper is retained for wrapper recovery; its default version is 8.11.1.
 
 This implementation is intentionally conservative and intentionally mirrors iOS behavior,
 so there is no telemetry and no cloud uploads.

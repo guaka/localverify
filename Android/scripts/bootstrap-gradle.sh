@@ -17,7 +17,7 @@ version_ge() {
   return 0
 }
 
-DEFAULT_GRADLE_VERSION="8.7"
+DEFAULT_GRADLE_VERSION="8.11.1"
 VERSION="${LOCALVERIFY_GRADLE_VERSION:-$DEFAULT_GRADLE_VERSION}"
 
 if [[ -x "./gradlew" && -f "./gradlew" ]]; then
@@ -35,7 +35,7 @@ Install options:
 - Set LOCALVERIFY_GRADLE_VERSION to a supported Gradle 8.x version and rerun.
 
 Example:
-  export LOCALVERIFY_GRADLE_VERSION=8.7
+  export LOCALVERIFY_GRADLE_VERSION=8.11.1
   ./scripts/bootstrap-gradle.sh
 MSG
   exit 1
