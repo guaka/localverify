@@ -79,6 +79,8 @@ struct LocalVerifyApp: App {
         }
         if ProcessInfo.processInfo.arguments.contains("--synthetic-case") {
             var report = Report(caseID: "synthetic-ui-case", indicators: .demo)
+            do { try Self.protect(folder(report.caseID)) }
+            catch { message = "Could not prepare synthetic case: \(error.localizedDescription)"; return }
             report.sysdiagnoseFilename = "sysdiagnose_synthetic_ui.tar.gz"
             report.analysisStartedAt = ISO8601DateFormatter().date(from: "2026-09-05T12:00:00Z")
             report.analysisFinishedAt = ISO8601DateFormatter().date(from: "2026-09-05T12:01:00Z")

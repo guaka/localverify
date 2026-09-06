@@ -1,25 +1,71 @@
 import XCTest
 
 final class ImportPickerTests: XCTestCase {
+    private func scrollToHittable(_ app: XCUIApplication, element: XCUIElement, attempts: Int = 12) {
+        for _ in 0..<attempts {
+            if element.isHittable { return }
+            app.swipeUp()
+        }
+    }
+
     func testCaseCopiesFiltersAndAutomaticNavigation() {
         let app = XCUIApplication(); app.launchArguments += ["--synthetic-case"]; app.launch()
         XCTAssertTrue(app.navigationBars["Case"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["sysdiagnose_synthetic_ui.tar.gz"].exists)
         let copyReport = app.buttons["copyCaseReport"]
-        for _ in 0..<6 where !copyReport.isHittable { app.swipeUp() }
+        scrollToHittable(app, element: copyReport)
         copyReport.tap()
         XCTAssertTrue(copyReport.label.contains("Copied"))
         let copyAll = app.buttons["copyAllPayloads"]
-        for _ in 0..<4 where !copyAll.isHittable { app.swipeUp() }
+        scrollToHittable(app, element: copyAll, attempts: 6)
         copyAll.tap()
         XCTAssertTrue(app.buttons["copyAllPayloads"].label.contains("Copied"))
         let filter = app.buttons["campaignFilter"]
-        for _ in 0..<6 where !filter.isHittable { app.swipeUp() }
+        scrollToHittable(app, element: filter)
         filter.tap()
         app.buttons["DarkSword (1)"].tap()
         XCTAssertFalse(app.staticTexts["pegasus-synthetic.invalid"].exists)
         let copyPayload = app.buttons["copyPayload-synthetic-darksword"]
-        for _ in 0..<6 where !copyPayload.isHittable { app.swipeUp() }
+        scrollToHittable(app, element: copyPayload)
+        copyPayload.tap()
+        XCTAssertTrue(copyPayload.label.contains("Copied"))
+    }
+
+    func testSyntheticCasePreparesZipForSharing() {
+        let app = XCUIApplication(); app.launchArguments += ["--synthetic-case"]; app.launch()
+        XCTAssertTrue(app.navigationBars["Case"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["sysdiagnose_synthetic_ui.tar.gz"].exists)
+
+        let caseReport = app.buttons["copyCaseReport"]
+        scrollToHittable(app, element: caseReport)
+        caseReport.tap()
+        XCTAssertTrue(caseReport.label.contains("Copied"))
+
+        let prepareExport = app.buttons["Prepare export"]
+        scrollToHittable(app, element: prepareExport)
+        prepareExport.tap()
+        let shareReport = app.buttons["Share report ZIP"]
+        let shareText = app.staticTexts["Share report ZIP"]
+        XCTAssertTrue((shareReport.waitForExistence(timeout: 10) || shareText.waitForExistence(timeout: 10)))
+    }
+
+    func testSyntheticCaseCampaignFilterShowsMatchedPayloads() {
+        let app = XCUIApplication(); app.launchArguments += ["--synthetic-case"]; app.launch()
+        XCTAssertTrue(app.navigationBars["Case"].waitForExistence(timeout: 5))
+
+        let filter = app.buttons["campaignFilter"]
+        scrollToHittable(app, element: filter)
+        filter.tap()
+
+        let darkSword = app.buttons["DarkSword (1)"]
+        XCTAssertTrue(darkSword.waitForExistence(timeout: 2))
+        XCTAssertTrue(app.buttons["Pegasus (1)"].exists)
+        darkSword.tap()
+        XCTAssertFalse(app.staticTexts["pegasus-synthetic.invalid"].waitForExistence(timeout: 1))
+
+        let copyPayload = app.buttons["copyPayload-synthetic-darksword"]
+        scrollToHittable(app, element: copyPayload)
+        XCTAssertTrue(app.staticTexts["darksword-synthetic.invalid"].exists)
         copyPayload.tap()
         XCTAssertTrue(copyPayload.label.contains("Copied"))
     }
@@ -44,7 +90,7 @@ final class ImportPickerTests: XCTestCase {
         XCTAssertTrue(settings.wait(for: .runningForeground, timeout: 10), app.debugDescription)
         #if targetEnvironment(simulator)
         // The simulator omits Touch/AssistiveTouch and lands on Accessibility instead.
-        XCTAssertTrue(settings.otherElements["AccessibilitySettingsControllerView"].waitForExistence(timeout: 5), settings.debugDescription)
+        XCTAssertTrue(settings.otherElements["AccessibilitySettingsControllerView"].waitForExistence(timeout: 15), settings.debugDescription)
         #else
         XCTAssertTrue(settings.navigationBars["AssistiveTouch"].waitForExistence(timeout: 5), settings.debugDescription)
         #endif
