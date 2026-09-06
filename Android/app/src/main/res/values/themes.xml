@@ -1,4 +1,7 @@
 <resources>
     <style name="Theme.LocalVerify" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">#F44336</item>
+        <item name="colorSecondary">#F44336</item>
+        <item name="android:colorAccent">#F44336</item>
     </style>
 </resources>

@@ -1,4 +1,7 @@
 import com.android.build.gradle.internal.api.BaseVariantOutputImpl
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
 plugins {
     id("com.android.application")
@@ -21,7 +24,8 @@ android {
         minSdk = 30
         targetSdk = 34
         versionCode = 1
-        versionName = "1.0.0"
+        versionName = "0.1.0-" + LocalDateTime.now(ZoneOffset.UTC)
+            .format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmm"))
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
