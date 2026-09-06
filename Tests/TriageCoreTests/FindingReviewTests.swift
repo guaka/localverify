@@ -27,4 +27,8 @@ final class FindingReviewTests: XCTestCase {
         report.errors = ["Synthetic interruption"]
         XCTAssertEqual(report.status, "Analysis incomplete")
     }
+
+    func testStructuredGuidanceMentionsRecognizedFieldSemantics() {
+        XCTAssertTrue(finding("structured").reviewGuidance.hasPrefix("A recognized field matched"))
+    }
 }

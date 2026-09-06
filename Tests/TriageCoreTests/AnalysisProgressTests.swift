@@ -99,4 +99,26 @@ final class AnalysisProgressTests: XCTestCase {
         XCTAssertEqual(finding.matchType, "raw-text")
         XCTAssertTrue(finding.reviewGuidance.hasPrefix("This short value is especially ambiguous"))
     }
+    func testAnalyzeAndScanExplicitNilProgressPaths() throws {
+        let indicators = [Indicator(id: "host", kind: "domain-name:value", value: "example.local")]
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        try Data("host example.local".utf8).write(to: folder.appendingPathComponent("fixture.log"))
+        let archive = folder.appendingPathComponent("fixture.tar.gz")
+        let tar = Process(); tar.executableURL = URL(fileURLWithPath: "/usr/bin/tar")
+        tar.arguments = ["-czf", archive.path, "-C", folder.path, "fixture.log"]
+        try tar.run(); tar.waitUntilExit(); XCTAssertEqual(tar.terminationStatus, 0)
+
+        _ = try Analyzer.scan("host example.local", source: "explicit.log", indicators: indicators, progress: nil)
+        let report = try Analyzer.analyze(
+            archive: archive,
+            indicators: IndicatorSet(version: "test", indicators: indicators, unsupported: []),
+            previous: Report(caseID: "nil-progress", indicators: .init(version: "test", indicators: indicators, unsupported: [])),
+            progress: nil,
+            checkpoint: { _ in }
+        )
+        XCTAssertEqual(report.status, "Unverified text matches")
+        XCTAssertEqual(report.findings.count, 1)
+    }
 }

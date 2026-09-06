@@ -8,14 +8,18 @@ final class ThreatUpdateTests: XCTestCase {
             return try ThreatUpdates.feeds.map { try Data(contentsOf: root.appendingPathComponent("iOS/App/ThreatData/\($0.resource).stix2")) }
         }
     }
-    private func temporaryThreatBundle() throws -> URL {
+    private func temporaryThreatBundle(resourcesInSubdirectory: Bool = false) throws -> URL {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let source = root.appendingPathComponent("iOS/App/ThreatData")
         let bundleURL = FileManager.default.temporaryDirectory.appendingPathComponent("ThreatUpdatesBundle-\(UUID().uuidString).bundle")
         try FileManager.default.createDirectory(at: bundleURL, withIntermediateDirectories: true)
-        try FileManager.default.copyItem(at: source.appendingPathComponent("threat-manifest.json"), to: bundleURL.appendingPathComponent("threat-manifest.json"))
+        let destinationDirectory = resourcesInSubdirectory ? bundleURL.appendingPathComponent("ThreatData", isDirectory: true) : bundleURL
+        if resourcesInSubdirectory {
+            try FileManager.default.createDirectory(at: destinationDirectory, withIntermediateDirectories: true)
+        }
+        try FileManager.default.copyItem(at: source.appendingPathComponent("threat-manifest.json"), to: destinationDirectory.appendingPathComponent("threat-manifest.json"))
         for feed in ThreatUpdates.feeds {
-            try FileManager.default.copyItem(at: source.appendingPathComponent("\(feed.resource).stix2"), to: bundleURL.appendingPathComponent("\(feed.resource).stix2"))
+            try FileManager.default.copyItem(at: source.appendingPathComponent("\(feed.resource).stix2"), to: destinationDirectory.appendingPathComponent("\(feed.resource).stix2"))
         }
         let info = [
             "CFBundleIdentifier": "org.mobiletriage.localverify.tests.threatdata",
@@ -55,6 +59,16 @@ final class ThreatUpdateTests: XCTestCase {
         XCTAssertNotNil(set.checkedAt)
         XCTAssertNotNil(set.byteCount)
     }
+    func testBundledThreatDataLoadsFromSubdirectoryResources() throws {
+        let bundleURL = try temporaryThreatBundle(resourcesInSubdirectory: true)
+        defer { try? FileManager.default.removeItem(at: bundleURL) }
+        let bundle = try XCTUnwrap(Bundle(path: bundleURL.path))
+        let set = try ThreatUpdates.bundled(in: bundle)
+        XCTAssertEqual(set.sources?.count, ThreatUpdates.feeds.count)
+        XCTAssertGreaterThan(set.indicators.count, 0)
+        XCTAssertNotNil(set.checkedAt)
+        XCTAssertNotNil(set.byteCount)
+    }
     func testPreferredInstalledSetUsesBundledWhenCachedHasNoCampaignMetadata() throws {
         let bundled = try ThreatUpdates.combine(payloads, checkedAt: nil)
         var cached = IndicatorSet(version: bundled.version, indicators: [Indicator(id: "manual", kind: "process:name", value: "manual.invalid")], unsupported: ["demo"])
@@ -63,6 +77,16 @@ final class ThreatUpdateTests: XCTestCase {
         XCTAssertEqual(selected.version, bundled.version)
         XCTAssertEqual(selected.sources, bundled.sources)
         XCTAssertEqual(selected.indicators, bundled.indicators)
+    }
+    func testPreferredInstalledSetUsesBundledWhenCachedSubsetHasNoTimestamp() throws {
+        let bundled = try ThreatUpdates.combine(payloads, checkedAt: nil)
+        var cached = bundled
+        cached.sources = [ThreatUpdates.feeds.first!.url.absoluteString]
+        cached.indicators = [Indicator(id: "manual", kind: "process:name", value: "manual.invalid")]
+        cached.latestIndicatorDate = nil
+        let selected = ThreatUpdates.preferredInstalledSet(cached: cached, bundled: bundled)
+        XCTAssertEqual(selected.version, bundled.version)
+        XCTAssertNil(selected.indicators.first(where: { $0.id == "manual" }))
     }
     func test2026CollectionsProduceTraceableLeadsWithoutDomainSubstringMatches() throws {
         for data in try payloads.suffix(2) {
@@ -114,5 +138,12 @@ final class ThreatUpdateTests: XCTestCase {
             XCTAssertEqual(feed.url.host, "raw.githubusercontent.com")
             XCTAssertNil(feed.url.query)
         }
+    }
+    func testIndicatorParseSupportsExplicitPatternTypeAndDateParsingFallbacks() throws {
+        let data = Data(#"{"type":"bundle","objects":[{"type":"indicator","id":"indicator--unit-pattern","name":"explicit-pattern-type","pattern_type":"stix","pattern":"[file:path = 'evidence.log']","created":"2024-01-01T00:00:00Z","modified":"2024-01-01T00:00:00Z"},{"type":"indicator","id":"indicator--unit-dropped","name":"explicit-valid-until","pattern_type":"stix","pattern":"[process:name = 'badproc']","valid_until":"2024-01-01T00:00:00Z","created":"2024-01-01T00:00:00Z","modified":"2024-01-01T00:00:00Z"}]}"#.utf8)
+        let set = try IndicatorSet.parse(data)
+        XCTAssertEqual(set.indicators.map(\.id), ["indicator--unit-pattern"])
+        XCTAssertEqual(set.unsupported, ["indicator--unit-dropped: valid_until is not supported"])
+        XCTAssertNotNil(set.latestIndicatorDate)
     }
 }
