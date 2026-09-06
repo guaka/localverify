@@ -43,6 +43,20 @@ Acceptance criteria:
 - Unsupported collection paths are identified early, with a route to help. The user never reaches a misleading successful empty check.
 - Bundled definitions allow analysis without obtaining a separate indicator file.
 
+#### Optional precaution before collection
+
+After **Check this phone**, offer a brief **Before you check** step. It must not block first launch or access to **I need help now**.
+
+Suggested text:
+
+> LocalVerify works offline. If you can safely pause calls and messages, consider enabling airplane mode and turning off Wi-Fi and Bluetooth in Settings before collecting diagnostics. This may temporarily limit spyware's communication. It does not remove spyware or guarantee that your activity is hidden.
+>
+> If you are already working with a forensic specialist, follow their collection instructions before changing connectivity. Changing the device's state may affect the evidence available.
+
+Offer **Show offline instructions** and **Continue without disconnecting** with no requirement to disconnect. Explain that staying reachable may be important for personal safety. Airplane mode alone is not proof of isolation: Wi-Fi and Bluetooth may remain available. Malware may record activity locally and report it after reconnection.
+
+Do not label the phone secure based on connectivity, change connectivity automatically, or automatically reconnect after analysis. Platform-specific instructions must be verified against supported OS versions. References: [RSF digital safety guidance](https://resources.rsf.org/chapter-4/) and [Apple's airplane-mode guidance](https://support.apple.com/en-gb/108785).
+
 ### J3. Understand what the check means
 
 As a journalist, I receive an understandable outcome with an available next action.
