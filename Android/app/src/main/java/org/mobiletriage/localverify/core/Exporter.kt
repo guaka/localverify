@@ -59,6 +59,7 @@ ${finding.excerpt}
         return """
 <!doctype html>
 <meta charset='utf-8'>
+<meta http-equiv='Content-Security-Policy' content="default-src 'none'; style-src 'unsafe-inline'">
 <meta name='viewport' content='width=device-width'>
 <title>Local Verify report</title>
 <style>body{font:16px system-ui;max-width:900px;margin:40px auto;padding:20px}pre{white-space:pre-wrap;overflow-wrap:anywhere}article{border-top:1px solid #aaa}</style>
