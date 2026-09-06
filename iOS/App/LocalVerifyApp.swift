@@ -176,10 +176,14 @@ struct LocalVerifyApp: App {
             }
         }
         job = Task {
-            do { _ = try await withTaskCancellationHandler(operation: { try await worker.value }, onCancel: { worker.cancel() }) }
+            do {
+                let result = try await withTaskCancellationHandler(operation: { try await worker.value }, onCancel: { worker.cancel() })
+                message = result.completed && result.errors.isEmpty
+                    ? "Analysis finished. Open Cases to review the result."
+                    : "Analysis incomplete. Open the case to review errors and available results."
+            }
             catch { message = error.localizedDescription }
             busy = false; canCancel = false; load()
-            message = "Analysis stopped or finished. Open Cases to review the result."
         }
     }
     func showCompletedCase(_ id: String) {
@@ -381,7 +385,7 @@ struct AboutView: View {
                     }
                     .font(.title2.bold())
                     Text("Private, on-device diagnostic verification for investigators.")
-                    LabeledContent("Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0-20260906-0940")
+                    LabeledContent("Version", value: Bundle.main.infoDictionary?["LocalVerifyDisplayVersion"] as? String ?? Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown")
                 }
                 Section("Privacy") {
                     Label("Analysis stays on this device", systemImage: "iphone")
@@ -454,6 +458,19 @@ struct CaseView: View {
                     DisclosureGroup("Definition details") { Text(report.indicatorVersion).font(.caption).textSelection(.enabled) }
                     if !report.completed { Button("Resume analysis") { model.run(report) }.disabled(model.busy) }
                 }
+                if !report.completed || !report.errors.isEmpty {
+                    Section("Errors") {
+                        if report.errors.isEmpty {
+                            Text("Analysis did not finish and no error was recorded. Resume analysis to continue.")
+                        }
+                        ForEach(report.errors, id: \.self) { error in
+                            Text(verbatim: error).textSelection(.enabled)
+                        }
+                        Text("Available matches are shown below. Incomplete analysis cannot rule out additional matches.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                    .accessibilityIdentifier("analysisErrors")
+                }
                 Section("Copy case data") {
                     Button(copiedItem == "case" ? "Copied case report" : "Copy case report", systemImage: "doc.on.doc") {
                         do { copy(String(decoding: try Export.json(report), as: UTF8.self), item: "case") }
@@ -479,6 +496,8 @@ struct CaseView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             Text(finding.value).font(finding.isAmbiguousTextMatch ? .body : .headline)
                                 .foregroundStyle(finding.isAmbiguousTextMatch ? .secondary : .primary)
+                                .textSelection(.enabled)
+                                .fixedSize(horizontal: false, vertical: true)
                             Text(finding.reviewTitle).font(.subheadline)
                             if finding.isAmbiguousTextMatch {
                                 Text("Short text match — especially ambiguous").font(.caption).foregroundStyle(.secondary)
@@ -486,32 +505,36 @@ struct CaseView: View {
                             Text((finding.campaigns ?? ["Uncategorized"]).joined(separator: ", ")).font(.subheadline).foregroundStyle(.secondary)
                             Text("\(finding.matchType) · \(finding.rule)").font(.caption)
                             Text("\(finding.source) — \(finding.record)").font(.caption)
-                            Text(finding.explanation).font(.footnote)
                             DisclosureGroup("How to review this match") {
+                                Text(finding.explanation).font(.footnote)
                                 Text(finding.reviewGuidance).font(.footnote)
                                 if finding.isPegasusBridgeheadReference {
                                     Text("Amnesty documented bh in historical Pegasus infections and suggested it may mean BridgeHead. A text occurrence here does not establish that the component executed.").font(.footnote)
                                     Text(verbatim: "Amnesty: Pegasus forensic methodology\nhttps://www.amnesty.org/en/latest/research/2021/07/forensic-methodology-report-how-to-catch-nso-groups-pegasus/").font(.footnote).textSelection(.enabled)
                                 }
                             }
-                            Text(finding.excerpt).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
+                            Text(finding.excerpt).font(.system(.footnote, design: .monospaced)).textSelection(.enabled)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .fixedSize(horizontal: false, vertical: true)
                             Button(copiedItem == finding.id ? "Copied payload" : "Copy payload", systemImage: "doc.on.doc") {
                                 copy(Export.payloadText(finding), item: finding.id)
                             }
                             .buttonStyle(.borderless)
                             .accessibilityIdentifier("copyPayload-\(finding.id)")
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
                     }
                 }
                 Section("Coverage") { Text("\(report.analyzed.count) files analyzed"); ForEach(report.skipped, id: \.self) { Text($0).font(.caption) } }
-                Section("Errors") { ForEach(report.errors, id: \.self) { Text($0).foregroundStyle(.orange) } }
                 Section("Escalation") {
                     Toggle("Include original sensitive archive", isOn: $original).disabled(model.busy).onChange(of: original) { _, _ in exportURL = nil }
                     Button("Prepare export") { Task { exportURL = await model.export(report, includeOriginal: original) } }.disabled(model.busy)
                     if let exportURL { ShareLink("Share report ZIP", item: exportURL) }
                 }
                 Section { Button("Delete case and local export", role: .destructive) { confirmDelete = true }.disabled(model.busy) }
-            }.navigationTitle("Case")
+            }.listStyle(.plain)
+                .navigationTitle("Case")
                 .safeAreaInset(edge: .bottom) { if model.busy { WorkProgressPanel(model: model) } }
                 .confirmationDialog("Delete this case permanently? Exported copies elsewhere will remain.", isPresented: $confirmDelete) { Button("Delete", role: .destructive) { model.delete(report); dismiss() } }
         }

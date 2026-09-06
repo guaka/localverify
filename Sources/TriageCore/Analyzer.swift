@@ -43,16 +43,25 @@ public enum Analyzer {
                 update("Checking file")
                 // Replace partial findings for this uncompleted file when resuming.
                 report.findings.removeAll { $0.source == path }
-                _ = try scan(text, source: path, indicators: indicators.indicators, progress: { stage in
-                    update(stage)
-                }, findingLimit: 10000 - report.findings.count, onFinding: { report.findings.append($0) })
-                report.analyzed.append(path)
+                var fullyAnalyzed = true
+                do {
+                    _ = try scan(text, source: path, indicators: indicators.indicators, progress: { stage in
+                        update(stage)
+                    }, findingLimit: 10000 - report.findings.count, onFinding: { report.findings.append($0) }, onCoverageGap: { reason in
+                        fullyAnalyzed = false
+                        report.errors.append("\(path): \(reason). Structured analysis unavailable; text matching used.")
+                    })
+                } catch let error as InputLimits.ResourceLimit {
+                    fullyAnalyzed = false
+                    report.errors.append("\(path): \(error.localizedDescription). This file was not fully analyzed; continued with other files.")
+                }
+                if fullyAnalyzed { report.analyzed.append(path) }
                 try checkpoint(report)
             }
             if report.analyzed.isEmpty { report.errors.append("No supported text or structured records were analyzed") }
             if indicators.indicators.isEmpty { report.errors.append("No supported indicators available") }
             guard try Archive.hash(archive) == digest else { throw TriageError.invalid("Evidence changed during analysis") }
-            report.completed = true
+            report.completed = report.errors.isEmpty
             report.analysisFinishedAt = Date()
         } catch {
             report.errors.append(error is CancellationError ? "Analysis interrupted; resume to continue" : error.localizedDescription)
@@ -62,7 +71,7 @@ public enum Analyzer {
         try checkpoint(report)
         return report
     }
-    public static func scan(_ text: String, source: String, indicators: [Indicator], progress: ((String) -> Void)? = nil, findingLimit: Int = 10000, onFinding: ((Finding) -> Void)? = nil) throws -> [Finding] {
+    public static func scan(_ text: String, source: String, indicators: [Indicator], progress: ((String) -> Void)? = nil, findingLimit: Int = 10000, onFinding: ((Finding) -> Void)? = nil, onCoverageGap: ((String) -> Void)? = nil) throws -> [Finding] {
         try InputLimits.text(text)
         try InputLimits.indicators(indicators)
         var findings: [Finding] = []
@@ -111,14 +120,14 @@ public enum Analyzer {
         var nodes = 0
         func collect(_ value: Any, path: String, timestamp: String?) throws {
             nodes += 1
-            guard nodes <= 100000, path.utf8.count <= 4096 else { throw TriageError.invalid("Structured record limit reached") }
+            guard nodes <= 100000, path.utf8.count <= 4096 else { throw InputLimits.ResourceLimit.exceeded("Structured record limit reached") }
             try Task.checkCancellation()
             if let object = value as? [String: Any] {
                 let time = (object["timestamp"] as? String) ?? (object["captureTime"] as? String) ?? timestamp
                 for key in object.keys.sorted() {
                     let item = object[key]!
                     if let string = item as? String {
-                        guard (path + "." + key).utf8.count <= 4096 else { throw TriageError.invalid("Structured path limit reached") }
+                        guard (path + "." + key).utf8.count <= 4096 else { throw InputLimits.ResourceLimit.exceeded("Structured path limit reached") }
                         if string.utf8.count <= 8192 { structured.append((path + "." + key, string, time.map { String($0.prefix(256)) })) }
                     }
                     else { try collect(item, path: path + "." + key, timestamp: time) }
@@ -134,11 +143,19 @@ public enum Analyzer {
             try InputLimits.json(data)
             return try? JSONSerialization.jsonObject(with: data)
         }
-        if let json = try json(text) { try collect(json, path: "$", timestamp: nil) }
-        else {
-            if let first = lines.first, let json = try json(first) { try collect(json, path: "$header", timestamp: nil) }
-            let remainder = lines.dropFirst().joined(separator: "\n")
-            if let json = try json(remainder) { try collect(json, path: "$body", timestamp: nil) }
+        do {
+            if let json = try json(text) { try collect(json, path: "$", timestamp: nil) }
+            else {
+                if let first = lines.first, let json = try json(first) { try collect(json, path: "$header", timestamp: nil) }
+                let remainder = lines.dropFirst().joined(separator: "\n")
+                if let json = try json(remainder) { try collect(json, path: "$body", timestamp: nil) }
+            }
+        } catch let error as InputLimits.ResourceLimit {
+            // A caller must explicitly record reduced coverage before opting into
+            // raw-text fallback. Do not present a partial structured index as complete.
+            guard let onCoverageGap else { throw error }
+            structured.removeAll()
+            onCoverageGap(error.localizedDescription)
         }
         // Index recognized structured fields once; unrelated JSON strings never
         // need to be compared against every indicator.
@@ -169,7 +186,7 @@ public enum Analyzer {
             for (index, line) in lines.enumerated() {
                 if index % 256 == 0 { try Task.checkCancellation(); progress?("Checking text line \(index + 1)/\(lines.count)") }
                 workBytes += line.utf8.count + 1
-                guard workBytes <= 128 * 1024 * 1024 else { throw TriageError.invalid("Text matching work limit reached") }
+                guard workBytes <= 128 * 1024 * 1024 else { throw InputLimits.ResourceLimit.exceeded("Text matching work limit reached") }
                 if regex.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)) != nil {
                     try append(make(indicator, source, "line \(index + 1)", String(line.prefix(600)), "raw-text", nil))
 

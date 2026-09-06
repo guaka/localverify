@@ -2,6 +2,49 @@ import XCTest
 @testable import TriageCore
 
 final class HardeningTests: XCTestCase {
+    func testComplexJSONFallsBackAndContinuesPastThirteenMatches() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        try String(repeating: "triage-test.invalid\n", count: 13).write(to: folder.appendingPathComponent("before.log"), atomically: true, encoding: .utf8)
+        let complex = "{\"padding\":[" + String(repeating: "0,", count: 200_001) + "0],\"domain\":\"triage-test.invalid\"}"
+        try complex.write(to: folder.appendingPathComponent("complex.json"), atomically: true, encoding: .utf8)
+        try String(repeating: "triage-test.invalid\n", count: 189).write(to: folder.appendingPathComponent("after.log"), atomically: true, encoding: .utf8)
+        let archive = folder.appendingPathComponent("synthetic.tar.gz")
+        let tar = Process(); tar.executableURL = URL(fileURLWithPath: "/usr/bin/tar")
+        tar.arguments = ["-czf", archive.path, "-C", folder.path, "before.log", "complex.json", "after.log"]
+        try tar.run(); tar.waitUntilExit(); XCTAssertEqual(tar.terminationStatus, 0)
+        let report = try Analyzer.analyze(archive: archive, indicators: .demo, previous: Report(caseID: "synthetic", indicators: .demo)) { _ in }
+        XCTAssertEqual(report.findings.count, 203)
+        XCTAssertEqual(report.analyzed, ["before.log", "after.log"])
+        XCTAssertFalse(report.completed)
+        XCTAssertEqual(report.errors.count, 1)
+        XCTAssertTrue(report.errors[0].contains("JSON complexity limit reached"))
+        XCTAssertEqual(report.findings.filter { $0.source == "complex.json" }.map(\.matchType), ["raw-text"])
+        let resumed = try Analyzer.analyze(archive: archive, indicators: .demo, previous: report) { _ in }
+        XCTAssertEqual(resumed.findings.count, 203)
+        XCTAssertEqual(resumed.errors, report.errors)
+        XCTAssertEqual(resumed.analyzed, report.analyzed)
+        XCTAssertFalse(resumed.completed)
+    }
+
+    func testLineLimitDoesNotHideMatchesInLaterFiles() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        try String(repeating: "x", count: 1024 * 1024 + 1).write(to: folder.appendingPathComponent("long.log"), atomically: true, encoding: .utf8)
+        try "triage-test.invalid\n".write(to: folder.appendingPathComponent("after.log"), atomically: true, encoding: .utf8)
+        let archive = folder.appendingPathComponent("synthetic.tar.gz")
+        let tar = Process(); tar.executableURL = URL(fileURLWithPath: "/usr/bin/tar")
+        tar.arguments = ["-czf", archive.path, "-C", folder.path, "long.log", "after.log"]
+        try tar.run(); tar.waitUntilExit(); XCTAssertEqual(tar.terminationStatus, 0)
+        let report = try Analyzer.analyze(archive: archive, indicators: .demo, previous: Report(caseID: "synthetic", indicators: .demo)) { _ in }
+        XCTAssertEqual(report.findings.count, 1)
+        XCTAssertEqual(report.analyzed, ["after.log"])
+        XCTAssertFalse(report.completed)
+        XCTAssertTrue(report.errors.contains { $0.contains("Text line limit reached") })
+    }
+
     func testJSONBudgetRejectsDeepInputIncludingIPSBody() throws {
         let deep = String(repeating: "[", count: 65) + "0" + String(repeating: "]", count: 65)
         XCTAssertThrowsError(try Analyzer.scan(deep, source: "deep.json", indicators: IndicatorSet.demo.indicators))

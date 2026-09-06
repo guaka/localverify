@@ -2,6 +2,12 @@ import Foundation
 
 /// Budgets are checked before Foundation parsing or allocation-heavy indexing.
 public enum InputLimits {
+    public enum ResourceLimit: LocalizedError {
+        case exceeded(String)
+        public var errorDescription: String? {
+            switch self { case .exceeded(let message): return message }
+        }
+    }
     public static let indicatorBytes = 5 * 1024 * 1024
     public static let textBytes = 16 * 1024 * 1024
     public static func read(_ url: URL, maximum: Int) throws -> Data {
@@ -16,11 +22,11 @@ public enum InputLimits {
         return data
     }
     public static func text(_ text: String) throws {
-        guard text.utf8.count <= textBytes else { throw TriageError.invalid("Text exceeds byte limit") }
+        guard text.utf8.count <= textBytes else { throw ResourceLimit.exceeded("Text exceeds byte limit") }
         var lines = 1; var length = 0
         for byte in text.utf8 {
             if byte == 10 || byte == 13 { lines += 1; length = 0 } else { length += 1 }
-            guard lines <= 500_000, length <= 1024 * 1024 else { throw TriageError.invalid("Text line limit reached") }
+            guard lines <= 500_000, length <= 1024 * 1024 else { throw ResourceLimit.exceeded("Text line limit reached") }
         }
     }
     /// A conservative lexical budget, not a JSON validator. Run before JSONSerialization.
@@ -37,7 +43,7 @@ public enum InputLimits {
                 if byte == 123 || byte == 91 { depth += 1; tokens += 1 }
                 if byte == 125 || byte == 93 { depth = max(0, depth - 1) }
                 if byte == 44 { tokens += 1 }
-                guard depth <= 64, tokens <= 200_000 else { throw TriageError.invalid("JSON complexity limit reached") }
+                guard depth <= 64, tokens <= 200_000 else { throw ResourceLimit.exceeded("JSON complexity limit reached") }
             }
         }
     }

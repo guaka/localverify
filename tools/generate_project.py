@@ -45,7 +45,7 @@ for key, name, groups, product in [('APP', 'LocalVerify', ['APPFILES', 'COREFILE
     add(key+'FRAMEWORKS', 'PBXFrameworksBuildPhase', buildActionMask=2147483647, files=[], runOnlyForDeploymentPostprocessing=0)
     configs = []
     for mode in ['Debug', 'Release']:
-        settings = dict(SDKROOT='iphoneos', IPHONEOS_DEPLOYMENT_TARGET='17.0', SWIFT_VERSION='5.0', TARGETED_DEVICE_FAMILY='1,2', CODE_SIGN_STYLE='Automatic', GENERATE_INFOPLIST_FILE='NO', PRODUCT_NAME='$(TARGET_NAME)', CURRENT_PROJECT_VERSION='1', MARKETING_VERSION=VERSION, SWIFT_OPTIMIZATION_LEVEL='-Onone' if mode == 'Debug' else '-O', SWIFT_ACTIVE_COMPILATION_CONDITIONS='DEBUG' if mode == 'Debug' else '', ENABLE_USER_SCRIPT_SANDBOXING='YES')
+        settings = dict(SDKROOT='iphoneos', IPHONEOS_DEPLOYMENT_TARGET='17.0', SWIFT_VERSION='5.0', TARGETED_DEVICE_FAMILY='1,2', CODE_SIGN_STYLE='Automatic', DEVELOPMENT_TEAM='SUJ594N47C', GENERATE_INFOPLIST_FILE='NO', PRODUCT_NAME='$(TARGET_NAME)', CURRENT_PROJECT_VERSION='2', MARKETING_VERSION='0.1.0', LOCALVERIFY_DISPLAY_VERSION=VERSION, SWIFT_OPTIMIZATION_LEVEL='-Onone' if mode == 'Debug' else '-O', SWIFT_ACTIVE_COMPILATION_CONDITIONS='DEBUG' if mode == 'Debug' else '', ENABLE_USER_SCRIPT_SANDBOXING='YES')
         settings.update(PRODUCT_BUNDLE_IDENTIFIER='org.mobiletriage.private' + ('.share' if key == 'SHARE' else ''), INFOPLIST_FILE='iOS/'+('Share' if key == 'SHARE' else 'App')+'-Info.plist', CODE_SIGN_ENTITLEMENTS='iOS/LocalVerify.entitlements')
         if key == 'APP':
             settings.update(SWIFT_INCLUDE_PATHS='$(SRCROOT)/Sources/CZlib', OTHER_LDFLAGS=['$(inherited)', '-lz'], ASSETCATALOG_COMPILER_APPICON_NAME='AppIcon', ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME='AccentColor')
