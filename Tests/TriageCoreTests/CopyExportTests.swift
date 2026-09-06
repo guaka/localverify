@@ -2,6 +2,21 @@ import XCTest
 @testable import TriageCore
 
 final class CopyExportTests: XCTestCase {
+    func testCopyStreamsFilesAndReportsProgress() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let source = folder.appendingPathComponent("source.bin")
+        let destination = folder.appendingPathComponent("destination.bin")
+        let payload = Data(repeating: 0x5A, count: 1024 * 1024)
+        try payload.write(to: source)
+        var seen: [Int] = []
+        try Archive.copy(source, to: destination, progress: { seen.append($0) })
+        XCTAssertEqual(try Data(contentsOf: destination), payload)
+        XCTAssertEqual(seen.last, payload.count)
+        XCTAssertGreaterThan(seen.count, 0)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: destination.path))
+    }
     func testIndividualAndAllPayloadsKeepSourceContext() throws {
         var report = Report(caseID: "synthetic-copy", indicators: .demo)
         report.archiveSHA256 = "synthetic-hash"

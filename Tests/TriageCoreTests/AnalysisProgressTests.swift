@@ -79,4 +79,24 @@ final class AnalysisProgressTests: XCTestCase {
         XCTAssertTrue(events.contains { $0.contains("Reading archive") })
         XCTAssertEqual(report.status, "Analysis incomplete")
     }
+    func testStructuredScanHandlesArrayRecords() throws {
+        let indicators = [
+            Indicator(id: "p", kind: "process:name", value: "badproc"),
+            Indicator(id: "f", kind: "file:path", value: "/tmp/a file")
+        ]
+        let text = "[{\"process\":\"badproc\",\"path\":\"/tmp/a file\"},{\"process\":\"benign\"}]"
+        let findings = try Analyzer.scan(text, source: "array.json", indicators: indicators)
+        XCTAssertEqual(findings.count, 2)
+        XCTAssertTrue(findings.allSatisfy { $0.matchType == "structured" })
+        XCTAssertEqual(Set(findings.map(\.rule)), ["p", "f"])
+    }
+
+    func testShortRawMatchRecordsAmbiguousReviewGuidance() throws {
+        let indicators = [Indicator(id: "tiny", kind: "process:name", value: "abc")]
+        let findings = try Analyzer.scan("abc", source: "short.log", indicators: indicators)
+        XCTAssertEqual(findings.count, 1)
+        let finding = try XCTUnwrap(findings.first)
+        XCTAssertEqual(finding.matchType, "raw-text")
+        XCTAssertTrue(finding.reviewGuidance.hasPrefix("This short value is especially ambiguous"))
+    }
 }

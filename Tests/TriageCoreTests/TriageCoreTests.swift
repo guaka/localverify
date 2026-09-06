@@ -109,14 +109,18 @@ final class TriageCoreTests: XCTestCase {
         XCTAssertTrue(report.findings.allSatisfy { $0.matchType == "structured" })
     }
     func testRealSysdiagnoseWhenProvided() throws {
-        guard let path = ProcessInfo.processInfo.environment["TRIAGE_REAL_SYSDIAGNOSE"], !path.isEmpty else {
-            throw XCTSkip("Set TRIAGE_REAL_SYSDIAGNOSE to run the optional real-archive smoke test")
-        }
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let path = ProcessInfo.processInfo.environment["TRIAGE_REAL_SYSDIAGNOSE"] ?? root.appendingPathComponent("Fixtures/derived-confirmed-pegasus-sysdiagnose.tar.gz").path
         let archive = URL(fileURLWithPath: path)
         XCTAssertTrue(FileManager.default.fileExists(atPath: archive.path))
         let report = try Analyzer.analyze(archive: archive, indicators: .demo, previous: Report(caseID: "real-sysdiagnose", indicators: .demo)) { _ in }
         XCTAssertTrue(report.completed, report.errors.joined(separator: "; "))
         XCTAssertFalse(report.analyzed.isEmpty)
         XCTAssertFalse(report.archiveSHA256.isEmpty)
+    }
+
+    func testTriageErrorDescription() {
+        XCTAssertEqual(TriageError.invalid("network disabled in test").errorDescription, "network disabled in test")
+        XCTAssertEqual(TriageError.invalid("other").localizedDescription, "other")
     }
 }
