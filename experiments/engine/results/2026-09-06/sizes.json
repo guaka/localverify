@@ -1,0 +1,8 @@
+{
+  "build/ios/rust-simulator": 4302768,
+  "build/ios/kmp-simulator": 2747856,
+  "build/ios/baseline": 51352,
+  "harness/build/outputs/apk/rust/debug/harness-rust-debug.apk": 6093077,
+  "harness/build/outputs/apk/baseline/debug/harness-baseline-debug.apk": 2456023,
+  "harness/build/outputs/apk/kmp/debug/harness-kmp-debug.apk": 3123303
+}

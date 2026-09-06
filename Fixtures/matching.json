@@ -1,7 +1,177 @@
 [
-  {"text":"connected triage-test.invalid", "expected":1, "matchType":"raw-text"},
-  {"text":"triage-test.invalid.example", "expected":0, "matchType":null},
-  {"text":"safe-triage-test.invalid", "expected":0, "matchType":null},
-  {"text":"{\"hostname\":\"TRIAGE-TEST.INVALID\"}", "expected":1, "matchType":"structured"},
-  {"text":"ordinary application crash", "expected":0, "matchType":null}
+  {
+    "text": "connected triage-test.invalid",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "triage-test.invalid",
+    "expected": 1,
+    "matchType": "raw-text",
+    "id": "matching-01"
+  },
+  {
+    "text": "triage-test.invalid.example",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "triage-test.invalid",
+    "expected": 0,
+    "matchType": null,
+    "id": "matching-02"
+  },
+  {
+    "text": "safe-triage-test.invalid",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "triage-test.invalid",
+    "expected": 0,
+    "matchType": null,
+    "id": "matching-03"
+  },
+  {
+    "text": "{\"hostname\":\"TRIAGE-TEST.INVALID\"}",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "triage-test.invalid",
+    "expected": 1,
+    "matchType": "structured",
+    "id": "matching-04"
+  },
+  {
+    "text": "{\"processname\":\"triage-proc\"}",
+    "indicatorKind": "process:name",
+    "indicatorValue": "triage-proc",
+    "expected": 1,
+    "matchType": "structured",
+    "id": "matching-05"
+  },
+  {
+    "text": "{\"process_name\":\"triage-proc\"}",
+    "indicatorKind": "process:name",
+    "indicatorValue": "triage-proc",
+    "expected": 1,
+    "matchType": "structured",
+    "id": "matching-06",
+    "legacy": {
+      "ios": {
+        "expected": 1,
+        "matchType": "raw-text",
+        "reason": "Swift does not recognize process_name"
+      }
+    }
+  },
+  {
+    "text": "{\"path\":\"/data/app/triage-proc.dex\"}",
+    "indicatorKind": "file:path",
+    "indicatorValue": "/data/app/triage-proc.dex",
+    "expected": 1,
+    "matchType": "structured",
+    "id": "matching-07"
+  },
+  {
+    "text": "download from https://triage-test.invalid/report?id=99",
+    "indicatorKind": "url:value",
+    "indicatorValue": "https://triage-test.invalid/report?id=99",
+    "expected": 1,
+    "matchType": "raw-text",
+    "id": "matching-08"
+  },
+  {
+    "text": "{\"filename\":\"triage-test.invalid\"}",
+    "indicatorKind": "file:name",
+    "indicatorValue": "triage-test.invalid",
+    "expected": 1,
+    "matchType": "structured",
+    "id": "matching-09"
+  },
+  {
+    "id": "benign",
+    "text": "ordinary application crash",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "triage-test.invalid",
+    "expected": 0,
+    "matchType": null
+  },
+  {
+    "id": "domain-case",
+    "text": "connected TRIAGE-TEST.INVALID",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "triage-test.invalid",
+    "expected": 1,
+    "matchType": "raw-text"
+  },
+  {
+    "id": "process-case",
+    "text": "TRIAGE-PROC",
+    "indicatorKind": "process:name",
+    "indicatorValue": "triage-proc",
+    "expected": 0,
+    "matchType": null
+  },
+  {
+    "id": "filename-case",
+    "text": "TRIAGE-PROC",
+    "indicatorKind": "file:name",
+    "indicatorValue": "triage-proc",
+    "expected": 0,
+    "matchType": null
+  },
+  {
+    "id": "url-case",
+    "text": "https://TRIAGE-TEST.INVALID/report",
+    "indicatorKind": "url:value",
+    "indicatorValue": "https://triage-test.invalid/report",
+    "expected": 0,
+    "matchType": null
+  },
+  {
+    "id": "timestamp",
+    "text": "{\"procName\":\"triage-proc\",\"timestamp\":\"2026-09-05T00:00:00Z\"}",
+    "indicatorKind": "process:name",
+    "indicatorValue": "triage-proc",
+    "expected": 1,
+    "matchType": "structured",
+    "timestamp": "2026-09-05T00:00:00Z"
+  },
+  {
+    "id": "malformed-json",
+    "text": "{\"hostname\": \"triage-test.invalid\"",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "triage-test.invalid",
+    "expected": 1,
+    "matchType": "raw-text"
+  },
+  {
+    "id": "unrelated-field",
+    "text": "{\"comment\":\"triage-test.invalid\"}",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "triage-test.invalid",
+    "expected": 1,
+    "matchType": "raw-text"
+  },
+  {
+    "id": "domain-dot",
+    "text": "{\"hostname\":\"triage-test.invalid.\"}",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "triage-test.invalid",
+    "expected": 1,
+    "matchType": "structured"
+  },
+  {
+    "id": "array",
+    "text": "[{\"path\":\"/data/app/test.dex\"}]",
+    "indicatorKind": "file:path",
+    "indicatorValue": "/data/app/test.dex",
+    "expected": 1,
+    "matchType": "structured"
+  },
+  {
+    "id": "ips",
+    "text": "{\"captureTime\":\"2026-09-05T00:00:00Z\"}\n{\"procName\":\"triage-proc\"}",
+    "indicatorKind": "process:name",
+    "indicatorValue": "triage-proc",
+    "expected": 1,
+    "matchType": "structured",
+    "legacy": {
+      "android": {
+        "expected": 1,
+        "matchType": "raw-text",
+        "reason": "JSONObject accepts the header and ignores trailing IPS body"
+      }
+    }
+  }
 ]

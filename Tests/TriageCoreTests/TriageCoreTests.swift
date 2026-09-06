@@ -15,13 +15,19 @@ final class TriageCoreTests: XCTestCase {
         XCTAssertEqual(try archive.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup, true)
     }
     func testSharedAndroidMatchingVectors() throws {
-        struct Vector: Decodable { let text: String; let expected: Int; let matchType: String? }
+        struct Expected: Decodable { let expected: Int; let matchType: String? }
+        struct Vector: Decodable {
+            let id: String; let text: String; let indicatorKind: String; let indicatorValue: String
+            let expected: Int; let matchType: String?; let timestamp: String?
+            let legacy: [String: Expected]?
+        }
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let vectors = try JSONDecoder().decode([Vector].self, from: Data(contentsOf: root.appendingPathComponent("Fixtures/matching.json")))
         for vector in vectors {
-            let result = try Analyzer.scan(vector.text, source: "fixture.txt", indicators: IndicatorSet.demo.indicators)
-            XCTAssertEqual(result.count, vector.expected)
-            if let type = vector.matchType { XCTAssertEqual(result.first?.matchType, type) }
+            let result = try Analyzer.scan(vector.text, source: "fixture.txt", indicators: [.init(id: "test-indicator", kind: vector.indicatorKind, value: vector.indicatorValue)])
+            XCTAssertEqual(result.count, vector.legacy?["ios"]?.expected ?? vector.expected, vector.id)
+            if let type = vector.legacy?["ios"]?.matchType ?? vector.matchType { XCTAssertEqual(result.first?.matchType, type, vector.id) }
+            if let timestamp = vector.timestamp { XCTAssertEqual(result.first?.timestamp, timestamp, vector.id) }
         }
     }
     func testSTIXRejectsCompoundPatterns() throws {

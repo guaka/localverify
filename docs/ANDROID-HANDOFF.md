@@ -1,5 +1,7 @@
 # Android continuation handoff
 
+> Shared-engine migration requirements and named legacy differences are maintained in [the engine contract guide](ENGINE-EXPERIMENT.md). Existing implementation and historical validation notes below remain platform-specific.
+
 Updated: 2026-09-06
 
 ## Continuation completed — current result

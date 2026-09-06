@@ -1,0 +1,250 @@
+[
+  {
+    "id": "raw-accent-exact",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "café.invalid",
+    "text": "café.invalid",
+    "expected": 1,
+    "matchType": "raw-text"
+  },
+  {
+    "id": "raw-accent-case",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "café.invalid",
+    "text": "CAFÉ.INVALID",
+    "expected": 0,
+    "matchType": null
+  },
+  {
+    "id": "structured-accent-case",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "café.invalid",
+    "text": "{\"HOSTNAME\":\".CAFÉ.INVALID.\"}",
+    "expected": 1,
+    "matchType": "structured"
+  },
+  {
+    "id": "unicode-boundary",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "test.invalid",
+    "text": "étest.invalid界",
+    "expected": 1,
+    "matchType": "raw-text"
+  },
+  {
+    "id": "unicode-dot-not-ascii",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "a.invalid",
+    "text": "a。invalid",
+    "expected": 0,
+    "matchType": null
+  },
+  {
+    "id": "punycode-no-expansion",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "café.invalid",
+    "text": "xn--caf-dma.invalid",
+    "expected": 0,
+    "matchType": null
+  },
+  {
+    "id": "combining-no-normalization",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "café.invalid",
+    "text": "{\"domain\":\"café.invalid\"}",
+    "expected": 0,
+    "matchType": null
+  },
+  {
+    "id": "confusable-no-expansion",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "a.invalid",
+    "text": "а.invalid",
+    "expected": 0,
+    "matchType": null
+  },
+  {
+    "id": "turkish-dot-raw",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "i.invalid",
+    "text": "İ.INVALID",
+    "expected": 0,
+    "matchType": null
+  },
+  {
+    "id": "turkish-dot-structured",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "i.invalid",
+    "text": "{\"domain\":\"İ.INVALID\"}",
+    "expected": 0,
+    "matchType": null
+  },
+  {
+    "id": "sigma-raw",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "σ.invalid",
+    "text": "Σ.invalid",
+    "expected": 0,
+    "matchType": null
+  },
+  {
+    "id": "sigma-structured",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "σ.invalid",
+    "text": "{\"domain\":\"Σ.INVALID\"}",
+    "expected": 1,
+    "matchType": "structured"
+  },
+  {
+    "id": "process-unicode-exact",
+    "indicatorKind": "process:name",
+    "indicatorValue": "启动😀",
+    "text": "{\"process_name\":\"启动😀\"}",
+    "expected": 1,
+    "matchType": "structured"
+  },
+  {
+    "id": "process-case-sensitive",
+    "indicatorKind": "process:name",
+    "indicatorValue": "Café",
+    "text": "{\"processname\":\"café\"}",
+    "expected": 0,
+    "matchType": null
+  },
+  {
+    "id": "file-combining-sensitive",
+    "indicatorKind": "file:name",
+    "indicatorValue": "café",
+    "text": "{\"filename\":\"café\"}",
+    "expected": 0,
+    "matchType": null
+  },
+  {
+    "id": "path-unicode-exact",
+    "indicatorKind": "file:path",
+    "indicatorValue": "/tmp/😀",
+    "text": "{\"path\":\"/tmp/😀\"}",
+    "expected": 1,
+    "matchType": "structured"
+  },
+  {
+    "id": "url-unicode-exact",
+    "indicatorKind": "url:value",
+    "indicatorValue": "https://例.invalid/😀",
+    "text": "https://例.invalid/😀",
+    "expected": 1,
+    "matchType": "raw-text"
+  },
+  {
+    "id": "url-case-sensitive",
+    "indicatorKind": "url:value",
+    "indicatorValue": "https://例.invalid/😀",
+    "text": "HTTPS://例.invalid/😀",
+    "expected": 0,
+    "matchType": null
+  },
+  {
+    "id": "emoji-raw",
+    "indicatorKind": "process:name",
+    "indicatorValue": "😀",
+    "text": "😀",
+    "expected": 1,
+    "matchType": "raw-text"
+  },
+  {
+    "id": "crlf-line",
+    "indicatorKind": "process:name",
+    "indicatorValue": "proc",
+    "text": "benign\r\nproc\r\n",
+    "expected": 1,
+    "matchType": "raw-text"
+  },
+  {
+    "id": "unicode-line-separator",
+    "indicatorKind": "process:name",
+    "indicatorValue": "proc",
+    "text": "benign proc",
+    "expected": 1,
+    "matchType": "raw-text"
+  },
+  {
+    "id": "structured-leading-dot",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": ".café.invalid.",
+    "text": "{\"domain\":\"CAFÉ.INVALID\"}",
+    "expected": 1,
+    "matchType": "structured"
+  },
+  {
+    "id": "raw-kelvin",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "ask.invalid",
+    "text": "asK.invalid",
+    "expected": 0,
+    "matchType": null
+  },
+  {
+    "id": "raw-long-s",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "ask.invalid",
+    "text": "aſk.invalid",
+    "expected": 0,
+    "matchType": null
+  },
+  {
+    "id": "structured-kelvin",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "ask.invalid",
+    "text": "{\"domain\":\"asK.invalid\"}",
+    "expected": 1,
+    "matchType": "structured"
+  },
+  {
+    "id": "structured-sharp-s",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "ss.invalid",
+    "text": "{\"domain\":\"ß.invalid\"}",
+    "expected": 0,
+    "matchType": null
+  },
+  {
+    "id": "structured-final-sigma-distinct",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "ος.invalid",
+    "text": "{\"domain\":\"ΟΣ.INVALID\"}",
+    "expected": 0,
+    "matchType": null
+  },
+  {
+    "id": "structured-medial-sigma",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "οσ.invalid",
+    "text": "{\"domain\":\"ΟΣ.INVALID\"}",
+    "expected": 1,
+    "matchType": "structured"
+  },
+  {
+    "id": "sigma-final-context",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "ος",
+    "text": "{\"domain\":\"ΟΣ\"}",
+    "expected": 1,
+    "matchType": "structured"
+  },
+  {
+    "id": "sigma-case-ignorable-context",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "ος́",
+    "text": "{\"domain\":\"ΟΣ́\"}",
+    "expected": 1,
+    "matchType": "structured"
+  },
+  {
+    "id": "sigma-no-previous-cased",
+    "indicatorKind": "domain-name:value",
+    "indicatorValue": "σ",
+    "text": "{\"domain\":\"Σ\"}",
+    "expected": 1,
+    "matchType": "structured"
+  }
+]

@@ -1,0 +1,32 @@
+[
+  {
+    "step": "rust-clean",
+    "seconds": 0.244,
+    "exitCode": 0
+  },
+  {
+    "step": "rust-clean-build",
+    "seconds": 26.14,
+    "exitCode": 0
+  },
+  {
+    "step": "rust-incremental-build",
+    "seconds": 0.183,
+    "exitCode": 0
+  },
+  {
+    "step": "kmp-clean",
+    "seconds": 0.832,
+    "exitCode": 0
+  },
+  {
+    "step": "kmp-clean-build",
+    "seconds": 34.958,
+    "exitCode": 0
+  },
+  {
+    "step": "kmp-incremental-build",
+    "seconds": 0.888,
+    "exitCode": 0
+  }
+]

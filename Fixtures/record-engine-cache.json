@@ -1,0 +1,155 @@
+[
+  {
+    "id": "swift-reference",
+    "platform": "SWIFT",
+    "cache": {
+      "version": "manual",
+      "indicators": [
+        {
+          "id": "manual",
+          "kind": "file:name",
+          "value": "café",
+          "campaigns": null
+        }
+      ],
+      "unsupported": [],
+      "sources": null,
+      "checkedAt": 0
+    },
+    "checkedAt": 978307200000,
+    "error": false
+  },
+  {
+    "id": "swift-fraction",
+    "platform": "SWIFT",
+    "cache": {
+      "version": "manual",
+      "indicators": [
+        {
+          "id": "manual",
+          "kind": "file:name",
+          "value": "café",
+          "campaigns": null
+        }
+      ],
+      "unsupported": [],
+      "sources": null,
+      "checkedAt": 0.125
+    },
+    "checkedAt": 978307200125,
+    "error": false
+  },
+  {
+    "id": "android-epoch",
+    "platform": "ANDROID",
+    "cache": {
+      "version": "manual",
+      "indicators": [
+        {
+          "id": "manual",
+          "kind": "file:name",
+          "value": "café",
+          "campaigns": null
+        }
+      ],
+      "unsupported": [],
+      "sources": null,
+      "checkedAt": 0
+    },
+    "checkedAt": 0,
+    "error": false
+  },
+  {
+    "id": "android-ms",
+    "platform": "ANDROID",
+    "cache": {
+      "version": "manual",
+      "indicators": [
+        {
+          "id": "manual",
+          "kind": "file:name",
+          "value": "café",
+          "campaigns": null
+        }
+      ],
+      "unsupported": [],
+      "sources": null,
+      "checkedAt": 1788631772000
+    },
+    "checkedAt": 1788631772000,
+    "error": false
+  },
+  {
+    "id": "missing-dates",
+    "platform": "SWIFT",
+    "cache": {
+      "version": "manual",
+      "indicators": [
+        {
+          "id": "manual",
+          "kind": "file:name",
+          "value": "café",
+          "campaigns": null
+        }
+      ],
+      "unsupported": [],
+      "sources": null
+    },
+    "error": false
+  },
+  {
+    "id": "date-out-of-range",
+    "platform": "ANDROID",
+    "cache": {
+      "version": "manual",
+      "indicators": [
+        {
+          "id": "manual",
+          "kind": "file:name",
+          "value": "café",
+          "campaigns": null
+        }
+      ],
+      "unsupported": [],
+      "sources": null,
+      "checkedAt": 1e+25
+    },
+    "error": true
+  },
+  {
+    "id": "string-date-rejected",
+    "platform": "ANDROID",
+    "cache": {
+      "version": "manual",
+      "indicators": [
+        {
+          "id": "manual",
+          "kind": "file:name",
+          "value": "café",
+          "campaigns": null
+        }
+      ],
+      "unsupported": [],
+      "sources": null,
+      "checkedAt": "0"
+    },
+    "error": true
+  },
+  {
+    "id": "invalid-kind",
+    "platform": "SWIFT",
+    "cache": {
+      "version": "manual",
+      "indicators": [
+        {
+          "id": "x",
+          "kind": "unknown",
+          "value": "x"
+        }
+      ],
+      "unsupported": [],
+      "sources": null
+    },
+    "error": true
+  }
+]

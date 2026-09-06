@@ -103,3 +103,13 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.7.5")
 }
+
+// Package only canonical JSON vectors, never diagnostic archives.
+val contractFixtures by tasks.registering(Sync::class) {
+    from(rootProject.file("../Fixtures")) { include("*.json") }
+    into(layout.buildDirectory.dir("generated/contract-fixtures/fixtures"))
+}
+android.sourceSets.getByName("test").resources.srcDir(layout.buildDirectory.dir("generated/contract-fixtures"))
+tasks.configureEach {
+    if (name == "processDebugUnitTestJavaRes" || name == "processReleaseUnitTestJavaRes") dependsOn(contractFixtures)
+}

@@ -1,0 +1,39 @@
+[
+  {
+    "id": "line-limit",
+    "unit": "x",
+    "repeat": 1048577,
+    "error": true
+  },
+  {
+    "id": "utf8-line-limit",
+    "unit": "\u00e9",
+    "repeat": 524289,
+    "error": true,
+    "legacy": {
+      "android": {
+        "error": false
+      }
+    }
+  },
+  {
+    "id": "line-count",
+    "unit": "\n",
+    "repeat": 500001,
+    "error": true
+  },
+  {
+    "id": "json-depth",
+    "prefix": "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[",
+    "unit": "0",
+    "repeat": 1,
+    "suffix": "]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]",
+    "error": true
+  },
+  {
+    "id": "within-budget",
+    "unit": "benign\n",
+    "repeat": 100,
+    "error": false
+  }
+]

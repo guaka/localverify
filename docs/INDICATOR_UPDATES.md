@@ -1,5 +1,7 @@
 # Indicator refresh tools
 
+> Shared-engine migration requirements and named legacy differences are maintained in [the engine contract guide](ENGINE-EXPERIMENT.md). Existing implementation and historical validation notes below remain platform-specific.
+
 The app embeds 2.33 MB of STIX data: Amnesty International Pegasus and Predator/Cytrox (CC BY 2.0), plus MVT's expanded Predator, Coruna and DarkSword collections (MIT). Coruna and DarkSword incorporate published iOS research from March 2026. These selected collections are not comprehensive current-spyware coverage.
 
 ```

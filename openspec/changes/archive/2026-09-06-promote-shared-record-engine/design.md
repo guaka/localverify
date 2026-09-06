@@ -1,0 +1,23 @@
+## Context
+The experiment selected Kotlin Multiplatform. Existing native apps and case formats remain active until native-engine-integration. The frozen experiment remains reproducible; new production-oriented work lives in Shared/record-engine.
+
+## Decisions
+- Use Kotlin 2.2.21 and kotlinx.serialization-json 1.9.0, as validated by the experiment. No new third-party runtime library. Unicode 16.0 data is vendored as generated common-source tables with pinned source checksums and its license. Platform adapters use JVM MessageDigest and Apple CommonCrypto for SHA-256; common logic never performs I/O or networking.
+- Expose typed indicators, indicator sets, parse results, findings, scan results and per-run cancellation/progress. Use byte arrays in common code and a bounded NSData bulk-copy adapter for Swift. No archive/case/report APIs in this stage.
+- Index sought ASCII tokens in two passes and recognized structured fields once. Missing ASCII tokens bypass per-indicator text work. Non-token literals retain bounded exact text matching. All work, output, JSON and Unicode byte budgets remain explicit.
+- Preserve the prototype's ASCII case folding for raw domains, pinned Unicode 16.0 default lowercase/dot trimming for structured domains, and exact code-point sequences for non-domains. Do not normalize NFC/NFD or perform IDNA/confusable expansion. Count metadata/excerpt lengths in code points and resource budgets in UTF-8 bytes. LF determines raw-text line numbers. Characterize these rules on JVM, Kotlin/Native, Swift and Android, including supplementary characters and legacy differences.
+- Add campaign metadata, version, sources, checked time, latest indicator timestamp, byte count and origin. Imported sets remain imported; do not infer publisher ownership merely from arbitrary source strings.
+- Move the existing five unmodified publisher files, manifest and notices to Shared/ThreatData. Add one feed catalog. Verify per-file bytes/hashes and combined digest before returning a bundled set. De-duplicate exact kind/value pairs in feed order, retaining first ID and unioned campaign labels. iOS keeps its current loader and behavior using resources packaged from the new path; Android's existing demo loader is unchanged until cutover.
+- Read legacy Swift indicator-cache dates as seconds since 2001 and Android dates as epoch milliseconds, selected explicitly by caller. Preserve manual imports and unknown provenance. Only known publisher snapshots may upgrade automatically; retain newer sets and case-frozen sets. Same-version publisher metadata enrichment must not change matched rule/value identity.
+
+## Validation
+Canonical matching/STIX/budget vectors; explicit Unicode characterization and optimized/reference equivalence; five-feed hash/count/metadata parity; tampering and incomplete collections; cache migration fixtures; dense output and cancellation; representative 248 KB and 15.5 MB benign logs with 2,336 bundled definitions. Run JVM and Kotlin/Native budget unit tests, Swift simulator bindings, Android emulator instrumentation, device compilation, legacy app regression tests and strict OpenSpec/offline checks. Only synthetic evidence is used.
+
+## Dependency and packaging review
+The module has no network dependencies or platform file APIs. CommonCrypto/MessageDigest are used only for hashing supplied bytes. Add a dedicated shared-source policy check; keep the production Swift policy unchanged. Publish a local JVM library and static iOS framework, never a remote package dependency. Resource copying is generated from the canonical directory, not maintained as duplicate assets.
+
+## Migration boundaries
+Archive streaming, report rendering/serialization, native app cutover and removal of legacy engines are separate dependent changes. The experiment snapshot is retained as historical evidence. This stage does not claim full-app readiness or physical-device validation.
+
+## Unicode integration finding
+Android API 36 and the desktop JVM disagreed on lowercasing `ΟΣ.INVALID`: Android produced a final sigma while the desktop JVM produced a medial sigma. The original prototype delegated this to the runtime; the new characterization exposes behavior that the old experiment did not test. The production-oriented module therefore uses generated Unicode 16.0 default lowercase mappings and Cased/Case_Ignorable properties, including the language-independent Final_Sigma rule. Locale tailoring remains disabled. Every non-identity lowercase mapping is exercised by generated canonical fixtures on both native bindings. STIX syntax whitespace is explicitly ASCII; blank-value classification is pinned to Unicode White_Space. The frozen experiment remains unchanged.

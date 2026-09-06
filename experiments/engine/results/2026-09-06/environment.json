@@ -1,0 +1,38 @@
+{
+  "date": "2026-09-06",
+  "host": "Apple M3 Pro",
+  "hostMemoryBytes": 19327352832,
+  "xcode": "26.6 (17F113)",
+  "rust": "1.86.0",
+  "kotlin": "2.2.21",
+  "jdk": "21.0.4",
+  "gradle": "8.11.1",
+  "ndk": "27.2.12479018",
+  "iosSimulator": "iOS 26.5 ARM64",
+  "androidEmulator": {
+    "api": 36,
+    "abi": "arm64-v8a",
+    "ramMiB": 1536,
+    "cores": 2,
+    "freshSparseData": true
+  },
+  "productionValidation": {
+    "swiftTests": 50,
+    "androidUnitTests": 19,
+    "androidBuildAndLint": "passed",
+    "iosAppAndShareSimulatorBuild": "passed",
+    "offlinePolicyAndSelfTest": "passed"
+  },
+  "checksPerCandidatePerPlatform": 45,
+  "scope": "Synthetic record slice only; no archive or physical-device performance validation",
+  "sourceSHA256": {
+    "Fixtures/stix.json": "adb7844eafb7ea72889dc8b76fb9802dac464febca171d0ed7fcc1f696f6d3b4",
+    "Fixtures/benchmark.json": "9045000e672a977e76057e401d1391c1f2091cdf1d5f1085b4d05abaa27d5442",
+    "Fixtures/budgets.json": "4850435d3d1390cec21e7693e5e62ec6c9915428572c7a0388b25997fd71fc80",
+    "Fixtures/matching.json": "6d61ff8fefc4e78551c0d174d77e702daafe3c29e02f665021186699d2e5f0ea",
+    "experiments/engine/rust/src/lib.rs": "62946587c98512107f6943808f7335b6f4873ea2b16202c199c88987069b239a",
+    "experiments/engine/kmp/src/commonMain/kotlin/Engine.kt": "61be749ac380b0bba1d7237b31ce5b60d2ffbe96ce04db00e899a7461b01f000",
+    "experiments/engine/ios/main.swift": "a0163b1fdf421e71d37898a03b65acac242e784c5cd9067636917321699bfc1e",
+    "experiments/engine/harness/src/candidateTest/java/org/localverify/experiment/EngineTest.kt": "ba4234d6c65147065b2c629387f73eb7f66171a2e377738be9cfcc8eaf31b953"
+  }
+}

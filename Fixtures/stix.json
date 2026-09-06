@@ -1,0 +1,195 @@
+[
+  {
+    "id": "domain-name:value",
+    "bundle": {
+      "type": "bundle",
+      "objects": [
+        {
+          "type": "indicator",
+          "id": "test-indicator",
+          "pattern": "[domain-name:value = 'triage-test.invalid']"
+        }
+      ]
+    },
+    "supported": 1,
+    "unsupported": 0,
+    "error": false
+  },
+  {
+    "id": "url:value",
+    "bundle": {
+      "type": "bundle",
+      "objects": [
+        {
+          "type": "indicator",
+          "id": "test-indicator",
+          "pattern": "[url:value = 'triage-test.invalid']"
+        }
+      ]
+    },
+    "supported": 1,
+    "unsupported": 0,
+    "error": false
+  },
+  {
+    "id": "process:name",
+    "bundle": {
+      "type": "bundle",
+      "objects": [
+        {
+          "type": "indicator",
+          "id": "test-indicator",
+          "pattern": "[process:name = 'triage-test.invalid']"
+        }
+      ]
+    },
+    "supported": 1,
+    "unsupported": 0,
+    "error": false
+  },
+  {
+    "id": "file:path",
+    "bundle": {
+      "type": "bundle",
+      "objects": [
+        {
+          "type": "indicator",
+          "id": "test-indicator",
+          "pattern": "[file:path = 'triage-test.invalid']"
+        }
+      ]
+    },
+    "supported": 1,
+    "unsupported": 0,
+    "error": false
+  },
+  {
+    "id": "file:name",
+    "bundle": {
+      "type": "bundle",
+      "objects": [
+        {
+          "type": "indicator",
+          "id": "test-indicator",
+          "pattern": "[file:name = 'triage-test.invalid']"
+        }
+      ]
+    },
+    "supported": 1,
+    "unsupported": 0,
+    "error": false
+  },
+  {
+    "id": "compound",
+    "bundle": {
+      "type": "bundle",
+      "objects": [
+        {
+          "type": "indicator",
+          "id": "test-indicator",
+          "pattern": "[process:name = 'a' OR process:name = 'b']"
+        }
+      ]
+    },
+    "supported": 0,
+    "unsupported": 1,
+    "error": false
+  },
+  {
+    "id": "revoked",
+    "bundle": {
+      "type": "bundle",
+      "objects": [
+        {
+          "type": "indicator",
+          "id": "test-indicator",
+          "pattern": "[process:name = 'triage-proc']",
+          "revoked": true
+        }
+      ]
+    },
+    "supported": 0,
+    "unsupported": 1,
+    "error": false
+  },
+  {
+    "id": "expired",
+    "bundle": {
+      "type": "bundle",
+      "objects": [
+        {
+          "type": "indicator",
+          "id": "test-indicator",
+          "pattern": "[process:name = 'triage-proc']",
+          "valid_until": "2020-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "supported": 0,
+    "unsupported": 1,
+    "error": false
+  },
+  {
+    "id": "unsupported",
+    "bundle": {
+      "type": "bundle",
+      "objects": [
+        {
+          "type": "indicator",
+          "id": "test-indicator",
+          "pattern": "[software:name = 'a']"
+        }
+      ]
+    },
+    "supported": 0,
+    "unsupported": 1,
+    "error": false
+  },
+  {
+    "id": "pattern-type",
+    "bundle": {
+      "type": "bundle",
+      "objects": [
+        {
+          "type": "indicator",
+          "id": "test-indicator",
+          "pattern": "[process:name = 'triage-proc']",
+          "pattern_type": "yara"
+        }
+      ]
+    },
+    "supported": 0,
+    "unsupported": 1,
+    "error": false
+  },
+  {
+    "id": "not-bundle",
+    "bundle": {
+      "type": "indicator"
+    },
+    "supported": 0,
+    "unsupported": 0,
+    "error": true
+  },
+  {
+    "id": "missing-objects",
+    "bundle": {
+      "type": "bundle"
+    },
+    "supported": 0,
+    "unsupported": 0,
+    "error": true,
+    "legacy": {
+      "android": {
+        "error": false
+      }
+    }
+  },
+  {
+    "id": "malformed",
+    "raw": "{",
+    "supported": 0,
+    "unsupported": 0,
+    "error": true
+  }
+]

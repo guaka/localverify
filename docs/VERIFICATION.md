@@ -1,5 +1,7 @@
 # Verification and release gate
 
+> Shared-engine migration requirements and named legacy differences are maintained in [the engine contract guide](ENGINE-EXPERIMENT.md). Existing implementation and historical validation notes below remain platform-specific.
+
 Automated core tests cover equality/unsupported STIX patterns, structured versus raw matches, text boundaries, path safety, HTML escaping, archive analysis and resume, unchanged original hashes, ZIP integrity, and truncated archives. Fixtures are synthetic and establish software behavior only.
 
 An optional real-archive smoke test is available for a locally stored, authorized sysdiagnose archive. It is skipped by default so the repository neither distributes nor requires device evidence:
@@ -65,3 +67,12 @@ No real-world detection effectiveness is claimed before this gate. Unknown forma
 - iPhone 17 Pro / iOS 26.5 simulator: app build succeeded; two targeted UI tests passed for explicit Cases review/copy/filter behavior and the neutral progress panel. The privacy shield is included in this build. Physical-device background snapshots, locked storage, and capture behavior still require validation.
 - Offline source policy passed. No actual phone diagnostics, extracted evidence, case containers, or exports were transferred.
 - This is software hardening evidence, not real-world spyware detection validation. Android has separate current results in [ANDROID-VALIDATION-MATRIX.md](ANDROID-VALIDATION-MATRIX.md).
+
+
+### Shared contract adoption — 2026-09-06
+
+Canonical matching, STIX and budget vectors are now consumed by both production test suites. Named legacy expectations preserve current behavior. Experiment measurements and their limits are recorded separately in [ADR-001](ADR-001-shared-engine.md); they do not supersede physical-device release gates above.
+
+### Promoted shared record engine — 2026-09-06
+
+The standalone KMP module passed both native binding suites, common budget tests and legacy app regressions. Detailed counts, synthetic timings, the pinned Unicode integration finding and migration activation stages are recorded in [SHARED-RECORD-ENGINE.md](SHARED-RECORD-ENGINE.md). These results leave the existing physical-device and full-pipeline gates intact.

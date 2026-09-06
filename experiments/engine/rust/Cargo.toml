@@ -1,0 +1,23 @@
+[package]
+name = "triage_experiment"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.86"
+license = "AGPL-3.0-or-later"
+publish = false
+
+[lib]
+crate-type = ["lib", "staticlib", "cdylib"]
+
+[dependencies]
+uniffi = "=0.29.4"
+serde_json = "=1.0.140"
+regex = "=1.11.1"
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bindgen.rs"
+required-features = ["bindings"]
+
+[features]
+bindings = ["uniffi/cli"]

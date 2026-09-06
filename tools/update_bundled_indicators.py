@@ -10,8 +10,10 @@ import tempfile
 import urllib.parse
 import urllib.request
 
-FILES = {"pegasus": "2021-07-18_nso/pegasus.stix2", "cytrox": "2021-12-16_cytrox/cytrox.stix2"}
-MVT_FILES = {"predator": "intellexa_predator/predator.stix2", "coruna": "2026-03-03_coruna_cryptowaters/coruna.stix2", "darksword": "2026-03-30_darksword/darksword.stix2"}
+RESOURCE_ROOT = Path(__file__).resolve().parents[1] / "Shared/ThreatData"
+CATALOG = json.loads((RESOURCE_ROOT / "feed-catalog.json").read_text())["feeds"]
+FILES = {f["resource"]: f["path"] for f in CATALOG if f["group"] == "amnesty"}
+MVT_FILES = {f["resource"]: f["path"] for f in CATALOG if f["group"] == "mvt"}
 MAX_BYTES = 5 * 1024 * 1024
 SOURCE = "https://github.com/AmnestyTech/investigations"
 
@@ -30,7 +32,7 @@ def main():
     parser.add_argument("--mvt-revision", default="main", help="MVT indicator branch/tag/commit (default: main)")
     parser.add_argument("--check", action="store_true", help="Compare revisions without changing files")
     args = parser.parse_args()
-    destination = Path(__file__).resolve().parents[1] / "iOS/App/ThreatData"
+    destination = Path(__file__).resolve().parents[1] / "Shared/ThreatData"
     manifest_file = destination / "threat-manifest.json"
     commit = json.loads(fetch("https://api.github.com/repos/AmnestyTech/investigations/commits/" + urllib.parse.quote(args.revision, safe="")))
     revision = commit["sha"]

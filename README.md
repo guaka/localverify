@@ -1,5 +1,7 @@
 # Local Verify
 
+> Shared-engine migration requirements and named legacy differences are maintained in [the engine contract guide](docs/ENGINE-EXPERIMENT.md). Existing implementation and historical validation notes below remain platform-specific.
+
 <img src="iOS/App/Assets.xcassets/AppIcon.appiconset/app-icon.png" alt="Local Verify app icon" width="128">
 
 Local Verify is an experimental, local-only app for iOS 17+ and Android 11+ for importing and reviewing diagnostic archives: iOS sysdiagnose files and Android bug reports. It has no backend, telemetry, or evidence upload.
@@ -159,3 +161,11 @@ See [LICENSE](LICENSE) for the full terms. The software is provided without warr
 Third-party components and indicator datasets retain their own licenses and notices;
 see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Distributions must provide
 recipients access to the corresponding source as required by the AGPL.
+
+## Shared-engine development
+
+Install the pinned development CLI with `npm ci`, then use `npm run spec --` and `npm run spec:validate`. The wrapper disables OpenSpec telemetry. Repository-local assistant skills are in `.agents/skills/`.
+
+The [engine contract guide](docs/ENGINE-EXPERIMENT.md) records shared requirements and legacy differences. The [architecture decision](docs/ADR-001-shared-engine.md) compares the isolated Rust and Kotlin prototypes and stages the future migration. Production apps continue to use their existing engines.
+
+The selected KMP engine is promoted in [Shared](Shared/README.md), with typed results, bounded token indexing, publisher metadata and legacy cache handling. The original experiment remains frozen. Archive processing, report compatibility and activation in both native apps remain separate OpenSpec stages.

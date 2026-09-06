@@ -1,0 +1,15 @@
+{
+  "platform": "android-emulator",
+  "cases": 45,
+  "scanMs": [
+    30.953583,
+    29.058167,
+    22.115542,
+    18.699708,
+    18.860333
+  ],
+  "inputBytes": 180000,
+  "pssBeforeBenchmarkKiB": 88432,
+  "pssAfterBenchmarkKiB": 113082,
+  "cancelMs": 0.0715
+}

@@ -1,0 +1,11 @@
+{
+  "cancelMs": 0.16912500723265111,
+  "cases": 1564,
+  "largeInputBytes": 15500000,
+  "largeScanMs": 1028.8652916788124,
+  "peakRssBytes": 215531520,
+  "platform": "ios-simulator",
+  "publisherIndicators": 2336,
+  "smallScanMs": 52.09633335471153,
+  "version": "Pegasus \u00b7 Predator \u00b7 Coruna \u00b7 DarkSword \u00b7 c5f1b12b5971"
+}

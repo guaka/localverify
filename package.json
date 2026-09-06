@@ -1,0 +1,10 @@
+{
+  "name": "localverify-development",
+  "private": true,
+  "engines": { "node": ">=20.19.0" },
+  "scripts": {
+    "spec": "node tools/openspec.mjs",
+    "spec:validate": "node tools/openspec.mjs validate --all --strict"
+  },
+  "devDependencies": { "@fission-ai/openspec": "1.12.0" }
+}

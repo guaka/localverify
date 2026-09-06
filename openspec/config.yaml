@@ -1,0 +1,13 @@
+schema: spec-driven
+context: |
+  Local Verify is a local-only iOS 17+ and Android 11+ diagnostic triage app.
+  Keep native SwiftUI and Compose interfaces. Production engines remain in Swift/Kotlin during the experiment.
+  Follow AGENTS.md: Apple HIG for iOS work; never transfer real device evidence for debugging.
+  Use synthetic fixtures only. Shared specifications are migration targets; named legacy differences remain explicit.
+  Run the pinned CLI through npm run spec -- with telemetry disabled.
+  Archive changes only after validation; record unavailable checks honestly.
+rules:
+  specs:
+    - Link requirements to synthetic acceptance scenarios; distinguish current behavior from migration targets.
+  tasks:
+    - Include production regression checks and both native binding integrations when engine behavior changes.

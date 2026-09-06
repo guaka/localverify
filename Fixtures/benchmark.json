@@ -1,0 +1,13 @@
+{
+  "scan": {
+    "unit": "connected triage-test.invalid\nbenign.example\n",
+    "repeat": 4000,
+    "expectedFindings": 4000,
+    "iterations": 5
+  },
+  "cancel": {
+    "unit": "ordinary synthetic evidence line without a match\n",
+    "repeat": 5000,
+    "definitions": 500
+  }
+}

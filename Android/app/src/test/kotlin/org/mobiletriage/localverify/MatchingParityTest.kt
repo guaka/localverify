@@ -9,7 +9,12 @@ import org.mobiletriage.localverify.core.Indicator
 import org.mobiletriage.localverify.core.TriageAnalyzer
 import java.io.InputStreamReader
 
+private data class LegacyExpected(val expected: Int, val matchType: String?)
+
 private data class MatchingFixture(
+    val legacy: Map<String, LegacyExpected>?,
+    val id: String,
+    val timestamp: String?,
     val text: String,
     val indicatorKind: String = "domain-name:value",
     val indicatorValue: String = "triage-test.invalid",
@@ -43,10 +48,13 @@ class MatchingParityTest {
                 progressHint = {}
             )
 
-            assertEquals(fixture.expected, findings.size)
-            if (fixture.expected > 0) {
-                if (fixture.matchType != null) {
-                    assertTrue(findings.any { it.matchType == fixture.matchType })
+            val expected = fixture.legacy?.get("android")?.expected ?: fixture.expected
+            val matchType = fixture.legacy?.get("android")?.matchType ?: fixture.matchType
+            assertEquals(fixture.id, expected, findings.size)
+            fixture.timestamp?.let { assertEquals(fixture.id, it, findings.single().timestamp) }
+            if (expected > 0) {
+                if (matchType != null) {
+                    assertTrue("${fixture.id}: expected ${matchType}, got ${findings.map { it.matchType }}", findings.any { it.matchType == matchType })
                 }
             } else {
                 assertTrue(findings.isEmpty())

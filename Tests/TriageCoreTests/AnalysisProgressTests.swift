@@ -4,7 +4,7 @@ import XCTest
 final class AnalysisProgressTests: XCTestCase {
     func testRepresentativeLogWithBundledIndicators() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        let data = try ThreatUpdates.feeds.map { try Data(contentsOf: root.appendingPathComponent("iOS/App/ThreatData/\($0.resource).stix2")) }
+        let data = try ThreatUpdates.feeds.map { try Data(contentsOf: root.appendingPathComponent("Shared/ThreatData/\($0.resource).stix2")) }
         let indicators = try ThreatUpdates.combine(data, checkedAt: nil).indicators
         let text = String(repeating: "2026-09-05 19:00:00 normal process activity at benign.example\n", count: 4000)
         let start = Date()
@@ -35,7 +35,7 @@ final class AnalysisProgressTests: XCTestCase {
     }
     func testLargeSyntheticLogReportsProgressWithinAFile() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        let data = try ThreatUpdates.feeds.map { try Data(contentsOf: root.appendingPathComponent("iOS/App/ThreatData/\($0.resource).stix2")) }
+        let data = try ThreatUpdates.feeds.map { try Data(contentsOf: root.appendingPathComponent("Shared/ThreatData/\($0.resource).stix2")) }
         let indicators = try ThreatUpdates.combine(data, checkedAt: nil).indicators
         let text = String(repeating: "2026-09-05 19:00:00 normal process activity at benign.example\n", count: 250000)
         var progressCount = 0

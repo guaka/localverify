@@ -7,3 +7,15 @@ DerivedData/
 xcuserdata/
 .DS_Store
 TestData/
+
+node_modules/
+experiments/**/target/
+experiments/**/.gradle/
+experiments/**/.kotlin/
+experiments/**/build/
+experiments/**/local.properties
+Shared/**/build/
+Shared/.gradle/
+Shared/.kotlin/
+Shared/local.properties
+Shared/*.log

@@ -1,5 +1,7 @@
 # Android implementation plan (local module status update)
 
+> Shared-engine migration requirements and named legacy differences are maintained in [the engine contract guide](ENGINE-EXPERIMENT.md). Existing implementation and historical validation notes below remain platform-specific.
+
 Last updated: 2026-09-06
 
 Current validation: 9 API 36 emulator tests and 17 JVM tests pass; debug assembly and lint succeed. See the [current validation record](ANDROID-VALIDATION-MATRIX.md#current-hardening-and-workflow-validation--2026-09-06) for coverage, limitations, and the APK hash.
@@ -38,7 +40,7 @@ The Android module exists at `Android/` and currently includes:
   - File-based per-case storage in `storage/CaseStore.kt`
 - Resources/assets:
   - bundled indicators: `app/src/main/assets/bundled-indicators.stix2`
-  - matching fixtures: `app/src/main/assets/fixtures/matching.json`
+  - matching fixtures: `Fixtures/matching.json` (canonical test source)
   - file provider and backup policy XMLs under `app/src/main/res/xml/`
   - local Android tooling scripts under `Android/scripts/` (`bootstrap-gradle.sh`, `gradle-android.sh`, `check-android-env.sh`, `run-android-plan.sh`, `package-apk.sh`)
 
@@ -75,8 +77,8 @@ The Android module exists at `Android/` and currently includes:
   - file-path/file-name indicators
   - URL indicators
   - `Android/app/src/test/kotlin/org/mobiletriage/localverify/MatchingParityTest.kt`
-  - `Android/app/src/test/resources/fixtures/matching.json`
-  - `Android/app/src/main/assets/fixtures/matching.json` (same matrix copy)
+  - generated test resources from `Fixtures/matching.json`
+  - canonical source packaged into generated test resources; the former asset copy is removed
 - ✅ STIX parser skip/supported parity test coverage via:
   - `Android/app/src/test/kotlin/org/mobiletriage/localverify/IndicatorParserParityTest.kt`
   - `Android/app/src/test/kotlin/org/mobiletriage/localverify/TriageAnalyzerTest.kt`
@@ -123,7 +125,7 @@ Legend: `✅` implemented, `🟠` implemented but not validated on physical devi
 | Area | Status | Notes |
 | --- | --- | --- |
 | STIX parse parity surface | 🟠 | Core parser is present; `IndicatorParserParityTest` covers supported/unsupported vectors and skip reasons, full matrix parity still to validate. |
-| `Fixtures/matching.json` available | ✅ | Vendored in assets. |
+| `Fixtures/matching.json` available | ✅ | Canonical source packaged for tests. |
 | Structured vs raw-text matching behavior | 🟠 | Fixture-backed unit verification now spans domain/process/file/url indicator paths; full matrix parity still pending. |
 
 ### Workflow behavior

@@ -1,5 +1,7 @@
 # Local Verify Android
 
+> Shared-engine migration requirements and named legacy differences are maintained in [the engine contract guide](../docs/ENGINE-EXPERIMENT.md). Existing implementation and historical validation notes below remain platform-specific.
+
 This is a Kotlin/Jetpack Compose native Android implementation started from
 `docs/ANDROID.md`.
 
@@ -19,7 +21,7 @@ This is a Kotlin/Jetpack Compose native Android implementation started from
 - Export ZIP (`report.json`, `report.html`, optional original archive).
 - Internal backup exclusion via manifest/private storage policy.
 - Local analysis starts directly when the user taps Start; no consent checkbox. Sharing requires an explicit export action, with original archive inclusion opt-in.
-- Coverage matrix persistence (`app/src/main/assets/fixtures/matching.json` is vendored for parity testing).
+- Coverage matrix persistence (canonical `../Fixtures/matching.json` is packaged for parity testing).
 
 ## Run in Android Studio
 

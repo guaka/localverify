@@ -40,6 +40,13 @@ add('LICENSEFILE', 'PBXFileReference', lastKnownFileType='text', path='LICENSE',
 objects['MAIN']['children'].append('LICENSEFILE')
 add('LICENSEBUILD', 'PBXBuildFile', fileRef='LICENSEFILE')
 add('APPRESOURCES', 'PBXResourcesBuildPhase', buildActionMask=2147483647, files=['LICENSEBUILD'], runOnlyForDeploymentPostprocessing=0)
+# Package the single reviewed publisher resource source in the legacy app.
+for index, resource in enumerate(sorted((root / 'Shared/ThreatData').iterdir())):
+    if not resource.is_file(): continue
+    ref = add(f'THREATFILE{index}', 'PBXFileReference', lastKnownFileType='text', path=str(resource.relative_to(root)), sourceTree='<group>')
+    objects['MAIN']['children'].append(ref)
+    build = add(f'THREATBUILD{index}', 'PBXBuildFile', fileRef=ref)
+    objects['APPRESOURCES']['files'].append(build)
 for key, name, groups, product in [('APP', 'LocalVerify', ['APPFILES', 'COREFILES'], 'APPPRODUCT'), ('SHARE', 'LocalVerifyShare', ['SHAREFILES'], 'SHAREPRODUCT')]:
     add(key+'SOURCES', 'PBXSourcesBuildPhase', buildActionMask=2147483647, files=[], runOnlyForDeploymentPostprocessing=0)
     add(key+'FRAMEWORKS', 'PBXFrameworksBuildPhase', buildActionMask=2147483647, files=[], runOnlyForDeploymentPostprocessing=0)

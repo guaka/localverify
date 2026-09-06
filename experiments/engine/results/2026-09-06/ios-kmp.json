@@ -1,0 +1,16 @@
+{
+  "cancelMs": 0.09745833813212812,
+  "cancelRunMs": 9.235916659235954,
+  "cases": 45,
+  "inputBytes": 180000,
+  "peakRssBeforeBenchmarkBytes": 80314368,
+  "peakRssBytes": 80314368,
+  "platform": "ios-simulator",
+  "scanMs": [
+    47.447166667552665,
+    16.792791662737727,
+    38.17025001626462,
+    55.517791683087125,
+    73.22470835060813
+  ]
+}

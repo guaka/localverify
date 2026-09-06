@@ -1,0 +1,10 @@
+{
+  "cases": 1670,
+  "publisherIndicators": 2336,
+  "version": "Pegasus \u00b7 Predator \u00b7 Coruna \u00b7 DarkSword \u00b7 c5f1b12b5971",
+  "smallScanMs": 9.053583,
+  "largeScanMs": 286.465084,
+  "cancelMs": 0.130166,
+  "largeInputBytes": 15500000,
+  "platform": "desktop-jvm"
+}

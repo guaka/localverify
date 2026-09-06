@@ -1,0 +1,18 @@
+{
+  "date": "2026-09-06",
+  "kotlin": "2.2.21",
+  "serialization": "1.9.0",
+  "unicode": "16.0.0",
+  "python": "3.14.5",
+  "host": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "ios": "iPhone 17 / iOS 26.5 simulator; arm64 device compile only",
+  "android": "API 36 google_apis arm64 emulator, 1536 MiB RAM, 2 cores",
+  "sharedJvmBudgetTests": 4,
+  "kotlinNativeBudgetTests": 4,
+  "legacySwiftTests": 50,
+  "legacyAndroidTests": 19,
+  "productionIosBuild": "passed, app + share extension, simulator",
+  "productionAndroidBuildAndLint": "passed",
+  "publisherResourceBytes": "all five packaged iOS files and manifest match canonical SHA-256",
+  "phoneEvidenceTransferred": false
+}

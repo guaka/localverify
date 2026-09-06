@@ -5,12 +5,12 @@ final class ThreatUpdateTests: XCTestCase {
     private var payloads: [Data] {
         get throws {
             let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            return try ThreatUpdates.feeds.map { try Data(contentsOf: root.appendingPathComponent("iOS/App/ThreatData/\($0.resource).stix2")) }
+            return try ThreatUpdates.feeds.map { try Data(contentsOf: root.appendingPathComponent("Shared/ThreatData/\($0.resource).stix2")) }
         }
     }
     private func temporaryThreatBundle(resourcesInSubdirectory: Bool = false) throws -> URL {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        let source = root.appendingPathComponent("iOS/App/ThreatData")
+        let source = root.appendingPathComponent("Shared/ThreatData")
         let bundleURL = FileManager.default.temporaryDirectory.appendingPathComponent("ThreatUpdatesBundle-\(UUID().uuidString).bundle")
         try FileManager.default.createDirectory(at: bundleURL, withIntermediateDirectories: true)
         let destinationDirectory = resourcesInSubdirectory ? bundleURL.appendingPathComponent("ThreatData", isDirectory: true) : bundleURL

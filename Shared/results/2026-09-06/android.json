@@ -1,0 +1,10 @@
+{
+  "cases": 1670,
+  "publisherIndicators": 2336,
+  "version": "Pegasus \u00b7 Predator \u00b7 Coruna \u00b7 DarkSword \u00b7 c5f1b12b5971",
+  "smallScanMs": 42.375792,
+  "largeScanMs": 1711.013793,
+  "cancelMs": 0.035542,
+  "largeInputBytes": 15500000,
+  "platform": "android-emulator"
+}

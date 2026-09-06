@@ -1,0 +1,62 @@
+{
+  "feeds": [
+    {
+      "name": "pegasus",
+      "text": "{\"type\":\"bundle\",\"objects\":[{\"type\":\"indicator\",\"id\":\"first-0\",\"pattern\":\"[domain-name:value = 'duplicate.invalid']\",\"x_mvt_campaigns\":[\"Research\"],\"modified\":\"2026-01-01T00:00:00Z\"}]}"
+    },
+    {
+      "name": "cytrox",
+      "text": "{\"type\":\"bundle\",\"objects\":[{\"type\":\"indicator\",\"id\":\"first-1\",\"pattern\":\"[domain-name:value = 'duplicate.invalid']\",\"x_mvt_campaigns\":[\"Research\"],\"modified\":\"2026-01-01T00:00:00Z\"}]}"
+    },
+    {
+      "name": "predator",
+      "text": "{\"type\":\"bundle\",\"objects\":[{\"type\":\"indicator\",\"id\":\"first-2\",\"pattern\":\"[domain-name:value = 'duplicate.invalid']\",\"x_mvt_campaigns\":[\"Research\"],\"modified\":\"2026-01-01T00:00:00Z\"}]}"
+    },
+    {
+      "name": "coruna",
+      "text": "{\"type\":\"bundle\",\"objects\":[{\"type\":\"indicator\",\"id\":\"first-3\",\"pattern\":\"[domain-name:value = 'duplicate.invalid']\",\"x_mvt_campaigns\":[\"Research\"],\"modified\":\"2026-01-01T00:00:00Z\"}]}"
+    },
+    {
+      "name": "darksword",
+      "text": "{\"type\":\"bundle\",\"objects\":[{\"type\":\"indicator\",\"id\":\"first-4\",\"pattern\":\"[domain-name:value = 'duplicate.invalid']\",\"x_mvt_campaigns\":[\"Research\"],\"modified\":\"2026-01-01T00:00:00Z\"}]}"
+    }
+  ],
+  "manifest": {
+    "downloadedAt": "2026-01-02T00:00:00Z",
+    "files": [
+      {
+        "name": "pegasus",
+        "bytes": 184,
+        "sha256": "ea77332f98389c41567a821ab9aa89a0edb1f25b941f337b57d6586fd9629eeb"
+      },
+      {
+        "name": "cytrox",
+        "bytes": 184,
+        "sha256": "7c22a134df3e601392fb9d40f97f3a9b942e91922ddc4a1717345c9dd7fcb378"
+      },
+      {
+        "name": "predator",
+        "bytes": 184,
+        "sha256": "42d7bd4ab215b1d669196591ab58debdd8556908fb9ffed582872da7bd3d44f8"
+      },
+      {
+        "name": "coruna",
+        "bytes": 184,
+        "sha256": "5353349395af5c6082800d0ce7cb5df0e4e831cb64dbc617f88f4a7701406325"
+      },
+      {
+        "name": "darksword",
+        "bytes": 184,
+        "sha256": "8d7db25bb851dc6ec434a2d2aefe6ad9cdad9a92dad1ec4ca28e34efd7724ec3"
+      }
+    ]
+  },
+  "expectedId": "first-0",
+  "expectedCampaigns": [
+    "Pegasus",
+    "Research",
+    "Predator",
+    "Coruna",
+    "DarkSword"
+  ]
+}
